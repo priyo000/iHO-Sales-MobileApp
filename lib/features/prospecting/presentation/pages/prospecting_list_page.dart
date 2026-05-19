@@ -446,7 +446,13 @@ class _ProspectCard extends StatelessWidget {
 
   String _formatDate(String raw) {
     try {
-      final dt = DateTime.parse(raw).toLocal();
+      DateTime dt;
+      final asInt = int.tryParse(raw);
+      if (asInt != null) {
+        dt = DateTime.fromMillisecondsSinceEpoch(asInt).toLocal();
+      } else {
+        dt = DateTime.parse(raw).toLocal();
+      }
       const months = [
         'Jan',
         'Feb',
@@ -463,7 +469,7 @@ class _ProspectCard extends StatelessWidget {
       ];
       final hh = dt.hour.toString().padLeft(2, '0');
       final mm = dt.minute.toString().padLeft(2, '0');
-      return '${dt.day} ${months[dt.month - 1]} $hh:$mm';
+      return '$hh:$mm, ${dt.day} ${months[dt.month - 1]} ${dt.year}';
     } catch (_) {
       return raw;
     }

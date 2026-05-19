@@ -314,6 +314,7 @@ class CustomerRepository {
       'foto_toko_url': c.fotoTokoPath,
       'foto_ktp_path': c.fotoKtpPath,
       'is_local': c.isLocal == 1,
+      'created_at': c.createdAt,
       ...extraData,
     };
   }

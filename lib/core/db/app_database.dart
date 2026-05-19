@@ -1393,6 +1393,23 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> saveCustomers(List<Map<String, dynamic>> customers) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Deduplicate: remove local rows that have the same serverId as incoming server records.
+    // This prevents duplicates when a locally-created customer gets synced and then
+    // the server record is downloaded with a different primary key (server UUID vs localRef).
+    final serverIds = customers
+        .map((c) => c['id']?.toString())
+        .where((id) => id != null && id.isNotEmpty)
+        .cast<String>()
+        .toList();
+    if (serverIds.isNotEmpty) {
+      await (delete(customersTable)
+            ..where((t) =>
+                t.serverId.isIn(serverIds) &
+                t.id.isNotIn(serverIds)))
+          .go();
+    }
+
     await batch((batch) {
       for (final c in customers) {
         final id = c['id']?.toString() ?? '';
@@ -1729,7 +1746,7 @@ class AppDatabase extends _$AppDatabase {
                 t.status.lower().equals(status.toLowerCase()) |
                 t.status.isNull(),
           )
-          ..orderBy([(t) => OrderingTerm.asc(t.namaToko)]))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .watch();
   }
 

@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:developer' as dev;
 
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../db/app_database.dart';
 import '../../constants/api_constants.dart';
 import '../sync_service.dart';
@@ -227,6 +229,19 @@ class CustomerMutation {
     final localRef = generateLocalRef('create_pelanggan');
     final resolvedStatus = status ?? 'prospect';
 
+    // Read employeeId from session for dashboard prospect count
+    String? employeeId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userData = prefs.getString('user_data');
+      if (userData != null) {
+        final userMap = jsonDecode(userData) as Map<String, dynamic>;
+        employeeId = userMap['employeeId']?.toString() ??
+            userMap['employee_id']?.toString() ??
+            userMap['id_karyawan']?.toString();
+      }
+    } catch (_) {}
+
     final savedPhotoPaths = photoPaths?.isNotEmpty == true
         ? await _photoStorage.savePhotos(photoPaths!, 'pelanggan')
         : <String, String>{};
@@ -298,6 +313,7 @@ class CustomerMutation {
       atasNamaRekening: atasNamaRekening,
       topHari: topHari,
       limitKreditAwal: limitKreditAwal,
+      createdById: employeeId,
     );
 
     final isOnline = await _connectivity.checkNow();
