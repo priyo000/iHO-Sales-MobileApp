@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "515497528033",
+    "project_id": "sales-tracker-intigroup-fcm",
+    "storage_bucket": "sales-tracker-intigroup-fcm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:515497528033:android:a580f2992def5b7cdd45a0",
+        "android_client_info": {
+          "package_name": "com.intigroup.salestracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYMbHHjkqNdWIBBsYJIIglSG85XVaOmkU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

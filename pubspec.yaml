@@ -1,0 +1,90 @@
+name: sales_tracker_mobile
+description: "iHO-now Mobile App - Offline-First Sales Tracking with SSOT Architecture"
+publish_to: "none"
+version: 1.0.0-beta.3+4
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # ─── UPDATED: UI & Routing ───────────────────────────────────
+  go_router: ^17.2.1
+  google_fonts: ^8.0.1
+  google_nav_bar: ^5.0.6
+
+  # ─── State Management (Manual providers - no code gen) ─────
+  flutter_riverpod: ^2.6.1
+
+  # ─── UPDATED: Maps & Location ───────────────────────────────
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.0
+  geolocator: ^14.0.2
+
+  # ─── UPDATED: Features ──────────────────────────────────────
+  image_picker: ^1.2.1
+  fl_chart: ^1.1.1
+  intl: ^0.20.2
+  url_launcher: ^6.2.1
+  shared_preferences: ^2.5.5
+  permission_handler: ^12.0.1
+  flutter_image_compress: ^2.4.0
+  http_parser: ^4.1.2
+  timeago: ^3.7.1
+  firebase_core: ^4.7.0
+  firebase_messaging: ^16.1.1
+  flutter_local_notifications: ^20.1.0
+  device_info_plus: ^12.3.0
+  shimmer: ^3.0.0
+  path_provider: ^2.1.5
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
+
+  # ─── NEW: Offline-First Database (Drift = SQLite ORM) ───────
+  drift: ^2.22.1
+  drift_sqflite: ^2.0.1
+  sqlite3_flutter_libs: ^0.5.0
+
+  # ─── NEW: HTTP Client (Dio) ─────────────────────────────────
+  dio: ^5.9.2
+
+  # ─── UPDATED: Offline First ──────────────────────────────────
+  path: ^1.9.0
+  connectivity_plus: ^7.1.1
+  workmanager: ^0.9.0+3
+  ota_update: ^7.1.0
+  package_info_plus: ^8.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
+
+  # ─── NEW: Drift Code Generation ──────────────────────────────
+  drift_dev: ^2.22.1
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/images/logo-app.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#137FEC" # Match AppTheme.primary
+  image: assets/images/logo-app.png
+  android_12:
+    image: assets/images/logo-app.png
+    color: "#137FEC"
+  web: false
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
