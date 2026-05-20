@@ -5,10 +5,10 @@ class ApiConstants {
 
   // Development: 10.0.2.2 = localhost dari Android Emulator
   // Untuk physical device, ganti ke IP WSL (cek: hostname -I di WSL terminal)
-  static const String _devBaseUrl = 'http://10.0.2.2:3000/api/v1/mobile';
+  static const String _devBaseUrl = 'http://127.0.0.1:3000/api/v1/mobile';
   static const String _prodBaseUrl = 'https://app.intigroup.top/api/v1/mobile';
 
-  static const String _devStorageUrl = 'http://10.0.2.2:3000';
+  static const String _devStorageUrl = 'http://127.0.0.1:3000';
   static const String _prodStorageUrl = 'https://app.intigroup.top';
 
   static String get baseUrl =>

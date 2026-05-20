@@ -3,14 +3,13 @@ import 'package:sales_tracker_mobile/features/orders/presentation/pages/order_de
 
 void main() {
   group('Order detail helpers', () {
-    test('parseServerOrderId returns valid positive int only', () {
-      expect(parseServerOrderId(123), 123);
-      expect(parseServerOrderId('45'), 45);
-      expect(parseServerOrderId('create_order_12345_00001'), isNull);
-      expect(parseServerOrderId(0), isNull);
-      expect(parseServerOrderId('0'), isNull);
+    test('parseServerOrderId returns valid string id only', () {
+      expect(parseServerOrderId(123), '123');
+      expect(parseServerOrderId('45'), '45');
+      expect(parseServerOrderId('uuid-abc-123'), 'uuid-abc-123');
       expect(parseServerOrderId(null), isNull);
-      expect(parseServerOrderId('abc'), isNull);
+      expect(parseServerOrderId(''), isNull);
+      expect(parseServerOrderId('null'), isNull);
     });
 
     test(
