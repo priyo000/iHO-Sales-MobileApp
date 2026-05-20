@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/utils/formatters.dart';
 
 import 'customer_stat_card.dart';
 
@@ -31,17 +32,6 @@ class CustomerFinancialSection extends StatelessWidget {
     if (str.contains('tunai') || str.contains('cash')) return Icons.payments;
     if (str.contains('giro')) return Icons.receipt_long;
     return Icons.payment;
-  }
-
-  String _formatCurrency(dynamic value) {
-    if (value == null) return '0';
-    final num = double.tryParse(value.toString()) ?? 0;
-    if (num >= 1000000) {
-      return '${(num / 1000000).toStringAsFixed(1)}jt';
-    } else if (num >= 1000) {
-      return '${(num / 1000).toStringAsFixed(0)}rb';
-    }
-    return num.toStringAsFixed(0);
   }
 
   @override
@@ -90,7 +80,7 @@ class CustomerFinancialSection extends StatelessWidget {
               Expanded(
                 child: CustomerStatCard(
                   label: 'Limit Kredit',
-                  value: 'Rp ${_formatCurrency(pelanggan['limit_kredit_awal'] ?? 0)}',
+                  value: Formatters.currencyCompact(pelanggan['limit_kredit_awal'] ?? 0),
                   subtext: 'Limit Awal',
                   subicon: Icons.account_balance_wallet,
                   subcolor: AppTheme.success,
