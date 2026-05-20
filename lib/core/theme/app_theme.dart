@@ -1,38 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_colors.dart';
 
 class AppTheme {
-  // Brand Colors from Design
-  static const Color primary = Color(0xFF137FEC);
-  static const Color backgroundLight = Color(0xFFF6F7F8);
-  static const Color backgroundDark = Color(0xFF101922);
+  AppTheme._();
 
-  // Text Colors
-  static const Color textDark = Color(0xFF0D141B);
-  static const Color textLight = Color(0xFFFFFFFF);
-
-  // Status Colors
-  static const Color success = Color(0xFF078838);
-  static const Color error = Color(0xFFE73908);
+  static const Color primary = AppColors.primary;
+  static const Color backgroundLight = AppColors.backgroundLight;
+  static const Color backgroundDark = AppColors.backgroundDark;
+  static const Color textDark = AppColors.textPrimary;
+  static const Color textLight = AppColors.textOnPrimary;
+  static const Color success = AppColors.success;
+  static const Color error = AppColors.error;
 
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: backgroundLight,
+      scaffoldBackgroundColor: AppColors.backgroundLight,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primary,
-        primary: primary,
-        // background property is deprecated in Flutter 3.18+
-        // surface is already defined below
-        surface: Colors.white,
+        seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        surface: AppColors.surface,
       ),
       textTheme: GoogleFonts.interTextTheme().apply(
-        bodyColor: textDark,
-        displayColor: textDark,
+        bodyColor: AppColors.textPrimary,
+        displayColor: AppColors.textPrimary,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: textDark,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
@@ -42,21 +38,22 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: backgroundDark,
+      scaffoldBackgroundColor: AppColors.backgroundDark,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primary,
-        primary: primary,
-
-        // background property is deprecated
-        surface: const Color(0xFF1A2632), // Slightly lighter than bg
+        seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        surface: AppColors.surfaceDark,
         brightness: Brightness.dark,
       ),
       textTheme: GoogleFonts.interTextTheme(
         ThemeData.dark().textTheme,
-      ).apply(bodyColor: textLight, displayColor: textLight),
+      ).apply(
+        bodyColor: AppColors.textOnPrimary,
+        displayColor: AppColors.textOnPrimary,
+      ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: backgroundDark,
-        foregroundColor: textLight,
+        backgroundColor: AppColors.backgroundDark,
+        foregroundColor: AppColors.textOnPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
