@@ -81,77 +81,59 @@ class CustomerRepository {
   /// After sync completes, all stream watchers auto-update
   bool _isSyncingCustomers = false;
   Future<void> syncCustomersToDrift({bool forceRefresh = false}) async {
-    if (_isSyncingCustomers) return; // Prevent concurrent/duplicate syncs
+    if (_isSyncingCustomers) return;
     final isOnline = await _connectivity.checkNow();
     if (!isOnline) return;
     _isSyncingCustomers = true;
 
     try {
-      final queryParams = <String, String>{
-        'status': 'active,pending,prospect',
-        'per_page': '-1',
-      };
+      // Build pending IDs set once (SSOT guard)
+      final pendingIds = await _buildPendingCustomerIds();
 
-      // Delta sync: only fetch customers updated since last sync
+      String? since;
       if (!forceRefresh) {
-        final lastModified = await _lastSync.getLastModified(
-          SyncResource.customers,
+        since = await _lastSync.getLastModified(SyncResource.customers);
+      }
+
+      // Paginated sync: fetch 500 per batch to handle 4000-5000 customers
+      const batchSize = 500;
+      int page = 1;
+      bool hasMore = true;
+      int totalSaved = 0;
+
+      while (hasMore) {
+        final queryParams = <String, String>{
+          'status': 'active,pending,prospect',
+          'per_page': batchSize.toString(),
+          'page': page.toString(),
+        };
+        if (since != null) queryParams['since'] = since;
+
+        final uri = Uri.parse(ApiConstants.pelanggan)
+            .replace(queryParameters: queryParams);
+
+        final response = await _dioClient.get(
+          uri.toString(),
+          options: Options(receiveTimeout: const Duration(seconds: 60)),
         );
-        if (lastModified != null) {
-          queryParams['since'] = lastModified;
-        }
-      }
 
-      final uri = Uri.parse(
-        ApiConstants.pelanggan,
-      ).replace(queryParameters: queryParams);
-
-      final response = await _dioClient.get(
-        uri.toString(),
-        options: Options(receiveTimeout: const Duration(seconds: 60)),
-      );
-
-      List<Map<String, dynamic>>? customerList;
-
-      if (response is Map && response['data'] is List) {
-        customerList = (response['data'] as List)
-            .map((c) => Map<String, dynamic>.from(c as Map))
-            .toList();
-      } else if (response is List) {
-        customerList = response
-            .map((c) => Map<String, dynamic>.from(c as Map))
-            .toList();
-      }
-
-      if (customerList != null && customerList.isNotEmpty) {
-        // SSOT guard: skip overwriting customers that have pending mutations
-        // (offline edits/creates not yet synced) to preserve optimistic state.
-        final pendingTypes = const [
-          'update_pelanggan',
-          'update_customer_photo',
-          'create_pelanggan',
-          'create_prospect',
-        ];
-        final pendingIds = <String>{};
-        final endpointRegex = RegExp(r'/pelanggan/([^/?]+)');
-        for (final type in pendingTypes) {
-          final pendings = await _sync.getPendingByType(type);
-          for (final p in pendings) {
-            final endpoint = p['endpoint'] as String?;
-            if (endpoint != null) {
-              final m = endpointRegex.firstMatch(endpoint);
-              if (m != null) pendingIds.add(m.group(1)!);
-            }
-            final payload = p['payload'];
-            if (payload is Map) {
-              final driftId = payload['_drift_record_id']?.toString();
-              if (driftId != null) pendingIds.add(driftId);
-              final clientRef = payload['client_ref']?.toString();
-              if (clientRef != null) pendingIds.add(clientRef);
-            }
-          }
+        List<Map<String, dynamic>>? customerList;
+        if (response is Map && response['data'] is List) {
+          customerList = (response['data'] as List)
+              .map((c) => Map<String, dynamic>.from(c as Map))
+              .toList();
+        } else if (response is List) {
+          customerList = response
+              .map((c) => Map<String, dynamic>.from(c as Map))
+              .toList();
         }
 
+        if (customerList == null || customerList.isEmpty) {
+          hasMore = false;
+          break;
+        }
+
+        // Filter out customers with pending mutations
         final filtered = customerList.where((c) {
           final id = c['id']?.toString();
           if (id == null) return true;
@@ -164,17 +146,59 @@ class CustomerRepository {
 
         if (filtered.isNotEmpty) {
           await _db.saveCustomers(filtered);
+          totalSaved += filtered.length;
         }
-        await _lastSync.setLastSync(
-          SyncResource.customers,
-          lastModified: DateTime.now(),
-        );
+
+        // Check if there are more pages
+        final meta = response is Map ? response['meta'] : null;
+        if (meta is Map && meta['hasMore'] == true) {
+          page++;
+        } else if (customerList.length < batchSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
       }
+
+      debugPrint('[Customer SSOT] Sync complete: $totalSaved customers saved');
+      await _lastSync.setLastSync(
+        SyncResource.customers,
+        lastModified: DateTime.now(),
+      );
     } catch (e) {
       debugPrint('[Customer SSOT] Sync failed: $e');
     } finally {
       _isSyncingCustomers = false;
     }
+  }
+
+  Future<Set<String>> _buildPendingCustomerIds() async {
+    final pendingIds = <String>{};
+    final pendingTypes = const [
+      'update_pelanggan',
+      'update_customer_photo',
+      'create_pelanggan',
+      'create_prospect',
+    ];
+    final endpointRegex = RegExp(r'/pelanggan/([^/?]+)');
+    for (final type in pendingTypes) {
+      final pendings = await _sync.getPendingByType(type);
+      for (final p in pendings) {
+        final endpoint = p['endpoint'] as String?;
+        if (endpoint != null) {
+          final m = endpointRegex.firstMatch(endpoint);
+          if (m != null) pendingIds.add(m.group(1)!);
+        }
+        final payload = p['payload'];
+        if (payload is Map) {
+          final driftId = payload['_drift_record_id']?.toString();
+          if (driftId != null) pendingIds.add(driftId);
+          final clientRef = payload['client_ref']?.toString();
+          if (clientRef != null) pendingIds.add(clientRef);
+        }
+      }
+    }
+    return pendingIds;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

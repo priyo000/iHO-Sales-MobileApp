@@ -1,21 +1,20 @@
 enum Environment { development, production }
 
 class ApiConstants {
-  static const Environment _env = Environment.development;
+  static const Environment _env = Environment.production;
 
-  // Development: 10.0.2.2 = localhost dari Android Emulator
-  // Untuk physical device, ganti ke IP WSL (cek: hostname -I di WSL terminal)
+  // Development: localhost via ADB reverse (real device) or 10.0.2.2 (emulator)
   static const String _devBaseUrl = 'http://127.0.0.1:3000/api/v1/mobile';
-  static const String _prodBaseUrl = 'https://app.intigroup.top/api/v1/mobile';
+  static const String _prodBaseUrl = 'https://iho.intigroup.top/api/v1/mobile';
 
   static const String _devStorageUrl = 'http://127.0.0.1:3000';
-  static const String _prodStorageUrl = 'https://app.intigroup.top';
+  static const String _prodStorageUrl = 'https://iho.intigroup.top';
 
   static String get baseUrl =>
-      _env == Environment.development ? _devBaseUrl : _prodBaseUrl;
+      _env == Environment.production ? _prodBaseUrl : _devBaseUrl;
 
   static String get storageUrl =>
-      _env == Environment.development ? _devStorageUrl : _prodStorageUrl;
+      _env == Environment.production ? _prodStorageUrl : _devStorageUrl;
 
   // Auth
   static String get login => '$baseUrl/login';
