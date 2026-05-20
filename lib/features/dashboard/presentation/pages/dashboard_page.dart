@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/utils/formatters.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sales_tracker_mobile/core/auth/user_provider.dart';
 import '../controllers/dashboard_controller.dart';
@@ -15,32 +16,8 @@ import 'package:sales_tracker_mobile/core/services/download_status_service.dart'
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Ags',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des',
-    ];
-    const weekdays = [
-      'Senin',
-      'Selasa',
-      'Rabu',
-      'Kamis',
-      'Jumat',
-      'Sabtu',
-      'Minggu',
-    ];
-    return '${weekdays[date.weekday - 1]}, ${date.day} ${months[date.month - 1]} ${date.year}';
-  }
+  String _formatDate(DateTime date) =>
+      Formatters.date(date, pattern: 'EEEE, d MMM y');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -70,7 +47,6 @@ class DashboardPage extends ConsumerWidget {
                 ),
                 data: (data) {
                   final targetKunjungan = data['target_kunjungan'] ?? 0;
-                  final kunjunganSelesai = data['kunjungan_selesai'] ?? 0;
                   final kunjunganRuteSelesai =
                       data['kunjungan_rute_selesai'] ?? 0;
                   final luarRute = data['luar_rute'] ?? 0;
@@ -169,45 +145,40 @@ class DashboardPage extends ConsumerWidget {
                                       const Icon(Icons.notifications_none),
                                       Consumer(
                                         builder: (context, ref, _) {
-                                          final unreadCount = ref.watch(
+                                          final unreadAsync = ref.watch(
                                             unreadNotificationCountStreamProvider,
                                           );
-                                          return StreamBuilder<int>(
-                                            stream: unreadCount,
-                                            builder: (context, snapshot) {
-                                              final count = snapshot.data ?? 0;
-                                              if (count > 0) {
-                                                return Positioned(
-                                                  right: -2,
-                                                  top: -2,
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.all(4),
-                                                    decoration:
-                                                        const BoxDecoration(
-                                                          color: Colors.red,
-                                                          shape:
-                                                              BoxShape.circle,
-                                                        ),
-                                                    child: Text(
-                                                      count > 9
-                                                          ? '9+'
-                                                          : count.toString(),
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                      textAlign:
-                                                          TextAlign.center,
+                                          final count = unreadAsync.asData?.value ?? 0;
+                                          if (count > 0) {
+                                            return Positioned(
+                                              right: -2,
+                                              top: -2,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.all(4),
+                                                decoration:
+                                                    const BoxDecoration(
+                                                      color: Colors.red,
+                                                      shape:
+                                                          BoxShape.circle,
                                                     ),
+                                                child: Text(
+                                                  count > 9
+                                                      ? '9+'
+                                                      : count.toString(),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                   ),
-                                                );
-                                              }
-                                              return const SizedBox.shrink();
-                                            },
-                                          );
+                                                  textAlign:
+                                                      TextAlign.center,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          return const SizedBox.shrink();
                                         },
                                       ),
                                     ],

@@ -1,6 +1,7 @@
 import 'dart:developer' as dev;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/order_status.dart';
 import '../../../../core/providers/database_providers.dart';
 import '../../data/order_repository.dart';
 import '../../data/models/order_view_model.dart';
@@ -63,7 +64,7 @@ class OrderHistoryController extends Notifier<List<Map<String, dynamic>>> {
 
     if (_filter.status != 'All') {
       final statusMap = {
-        'Pending': 'PENDING',
+        'Pending': OrderStatus.pending.code,
         'Proses': 'APPROVED',
         'Sukses': 'COMPLETED',
         'Batal': 'CANCELLED',

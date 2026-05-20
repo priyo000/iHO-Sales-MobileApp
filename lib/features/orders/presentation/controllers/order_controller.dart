@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/database_providers.dart';
 import '../../../../core/db/app_database.dart';
+import '../../../../core/constants/order_status.dart';
 import '../../data/order_repository.dart';
 import '../../data/models/promo_model.dart';
 import 'cart_controller.dart';
@@ -12,7 +13,6 @@ import 'promo_controller.dart';
 import 'package:sales_tracker_mobile/features/orders/presentation/controllers/order_history_controller.dart';
 import '../../data/models/product_model.dart';
 import '../../../schedule/presentation/controllers/schedule_controller.dart';
-import '../pages/order_detail_page.dart';
 import 'package:sales_tracker_mobile/features/notifications/presentation/controllers/notifications_controller.dart';
 
 final orderControllerProvider = AsyncNotifierProvider<OrderController, void>(
@@ -196,7 +196,7 @@ class OrderController extends AsyncNotifier<void> {
           'catatan': notes,
           'diskon_total': diskonTotal,
           'total_tagihan': grandTotal,
-          'status': 'PENDING',
+          'status': OrderStatus.pending.code,
         },
       );
 

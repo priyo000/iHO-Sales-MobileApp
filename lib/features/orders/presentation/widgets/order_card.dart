@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sales_tracker_mobile/core/constants/order_status.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
 import 'package:sales_tracker_mobile/core/widgets/store_image.dart';
 
@@ -101,8 +102,8 @@ class OrderCard extends StatelessWidget {
                           color: Colors.orange.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          'PENDING',
+                        child: Text(
+                          OrderStatus.pending.code,
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import '../../../../core/constants/order_status.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../core/providers/database_providers.dart';
 import '../../../../core/widgets/store_image.dart';
@@ -201,7 +202,7 @@ class OrderDetailPage extends ConsumerWidget {
     } else if (tanggalTx is String) {
       date = DateTime.tryParse(tanggalTx)?.toLocal();
     }
-    final status = (displayOrder['status'] ?? 'PENDING')
+    final status = (displayOrder['status'] ?? OrderStatus.pending.code)
         .toString()
         .toUpperCase();
 
@@ -213,7 +214,7 @@ class OrderDetailPage extends ConsumerWidget {
         case 'PROSES':
         case 'PROCESS':
           return Colors.blue;
-        case 'PENDING':
+        case 'PENDING': // OrderStatus.pending.code
           return Colors.orange;
         case 'BATAL':
         case 'CANCELED':
@@ -606,7 +607,7 @@ class OrderDetailPage extends ConsumerWidget {
           ),
         ],
       ),
-      persistentFooterButtons: status == 'PENDING' && hasPendingActions
+      persistentFooterButtons: status == OrderStatus.pending.code && hasPendingActions
           ? const [
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
@@ -617,7 +618,7 @@ class OrderDetailPage extends ConsumerWidget {
               ),
             ]
           : null,
-      bottomNavigationBar: status == 'PENDING'
+      bottomNavigationBar: status == OrderStatus.pending.code
           ? Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

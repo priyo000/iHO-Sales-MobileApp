@@ -3,129 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
-import 'package:sales_tracker_mobile/core/utils/paginated_state.dart';
-import 'package:sales_tracker_mobile/features/customer/data/customer_repository.dart';
-import 'package:sales_tracker_mobile/features/customer/presentation/controllers/customer_controller.dart';
+import 'package:sales_tracker_mobile/core/utils/formatters.dart';
 import 'package:sales_tracker_mobile/core/widgets/shimmer_loading.dart';
 import 'package:sales_tracker_mobile/core/widgets/app_error_view.dart';
-import 'package:sales_tracker_mobile/core/services/sync_service.dart';
-import 'package:sales_tracker_mobile/core/auth/user_provider.dart';
-
-// ─── Controller ───────────────────────────────────────────────────────────────
-
-class ProspectController
-    extends Notifier<PaginatedState<Map<String, dynamic>>> {
-  static const int _perPage = 20;
-  String _search = '';
-  StreamSubscription? _driftSub;
-
-  String get search => _search;
-
-  @override
-  PaginatedState<Map<String, dynamic>> build() {
-    _load(1, reset: true);
-
-    // SSOT: Reload when local sync queue settles (prospect mutation synced).
-    ref.listen(pendingSyncCountProvider, (previous, next) {
-      if (next is AsyncData && !state.isRefreshing) {
-        _load(1, reset: true);
-      }
-    });
-
-    // SSOT: subscribe to Drift stream directly so the page reloads as soon as
-    // PreloadService populates the customers table (no manual refresh needed).
-    final stream = ref.read(customersByStatusStreamProvider('Prospect'));
-    _driftSub?.cancel();
-    _driftSub = stream.listen((_) {
-      if (!state.isRefreshing) _load(1, reset: true);
-    });
-    ref.onDispose(() => _driftSub?.cancel());
-
-    return const PaginatedState();
-  }
-
-  void setSearch(String search) {
-    _search = search;
-    _load(1, reset: true);
-  }
-
-  Future<void> loadMore() async {
-    if (!state.hasMore || state.isLoadingMore) return;
-    await _load(state.currentPage + 1, reset: false);
-  }
-
-  Future<void> refresh() async {
-    state = state.copyWith(isRefreshing: true, clearError: true);
-    try {
-      await ref
-          .read(customerRepositoryProvider)
-          .syncCustomersFromApi(
-            status: 'prospect',
-            search: _search.isEmpty ? null : _search,
-          );
-    } catch (e) {
-      debugPrint('[ProspectingList] Refresh sync failed: $e');
-    }
-    await _load(1, reset: true);
-  }
-
-  Future<void> _load(int page, {required bool reset}) async {
-    if (reset) {
-      state = state.copyWith(isRefreshing: true, clearError: true);
-    } else {
-      state = state.copyWith(isLoadingMore: true);
-    }
-    try {
-      final user = ref.read(userProvider);
-      final employeeId = user?['karyawan']?['id']?.toString();
-      final response = await ref
-          .read(customerRepositoryProvider)
-          .getCustomers(
-            status: 'prospect',
-            search: _search,
-            createdById: employeeId,
-            page: page,
-            perPage: _perPage,
-          );
-      final parsed = parsePaginatedResponse(response);
-
-      // Map items to ensure consistent keys that _ProspectCard expects
-      final mappedItems = parsed.items.map((item) {
-        return {
-          ...item,
-          'nama_toko':
-              item['nama_toko'] ??
-              item['nama_pelanggan'] ??
-              item['nama_pemilik'] ??
-              'No Name',
-          'status': item['status'] ?? item['status_pelanggan'] ?? 'PROSPECT',
-        };
-      }).toList();
-
-      state = state.copyWith(
-        items: reset ? mappedItems : [...state.items, ...mappedItems],
-        currentPage: parsed.currentPage,
-        lastPage: parsed.lastPage,
-        isLoadingMore: false,
-        isRefreshing: false,
-        clearError: true,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoadingMore: false,
-        isRefreshing: false,
-        error: e.toString(),
-      );
-    }
-  }
-}
-
-final prospectControllerProvider =
-    NotifierProvider<ProspectController, PaginatedState<Map<String, dynamic>>>(
-      ProspectController.new,
-    );
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+import 'package:sales_tracker_mobile/features/prospecting/presentation/controllers/prospect_controller.dart';
 
 class ProspectingListPage extends ConsumerStatefulWidget {
   const ProspectingListPage({super.key});
@@ -445,34 +326,12 @@ class _ProspectCard extends StatelessWidget {
   }
 
   String _formatDate(String raw) {
-    try {
-      DateTime dt;
-      final asInt = int.tryParse(raw);
-      if (asInt != null) {
-        dt = DateTime.fromMillisecondsSinceEpoch(asInt).toLocal();
-      } else {
-        dt = DateTime.parse(raw).toLocal();
-      }
-      const months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'Mei',
-        'Jun',
-        'Jul',
-        'Agu',
-        'Sep',
-        'Okt',
-        'Nov',
-        'Des',
-      ];
-      final hh = dt.hour.toString().padLeft(2, '0');
-      final mm = dt.minute.toString().padLeft(2, '0');
-      return '$hh:$mm, ${dt.day} ${months[dt.month - 1]} ${dt.year}';
-    } catch (_) {
-      return raw;
-    }
+    final asInt = int.tryParse(raw);
+    final dt = asInt != null
+        ? DateTime.fromMillisecondsSinceEpoch(asInt).toLocal()
+        : DateTime.tryParse(raw)?.toLocal();
+    if (dt == null) return raw;
+    return Formatters.date(dt, pattern: 'HH:mm, d MMM yyyy');
   }
 }
 

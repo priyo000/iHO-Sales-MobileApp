@@ -11,7 +11,7 @@ class NotificationsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notificationsStream = ref.watch(notificationsStreamProvider);
+    final notificationsAsync = ref.watch(notificationsStreamProvider);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -38,33 +38,22 @@ class NotificationsPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: StreamBuilder<List<NotificationEntity>>(
-        stream: notificationsStream,
-        builder: (context, snapshot) {
-          // SSOT: Data is instant from Drift - no loading spinner
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Gagal memuat notifikasi: ${snapshot.error}',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+      body: notificationsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Gagal memuat notifikasi: $error',
+                textAlign: TextAlign.center,
               ),
-            );
-          }
-
-          final notifications = snapshot.data ?? [];
-
+            ],
+          ),
+        ),
+        data: (notifications) {
           if (notifications.isEmpty) {
             return Center(
               child: Column(

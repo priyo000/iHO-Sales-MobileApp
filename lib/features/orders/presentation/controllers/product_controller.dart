@@ -18,8 +18,7 @@ final productControllerProvider =
 // Use these for new StreamBuilder-based UI code.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Watch all products - returns Stream for use with StreamBuilder
-final productsStreamProvider = Provider<Stream<List<Product>>>((ref) {
+final productsStreamProvider = StreamProvider<List<Product>>((ref) {
   final repo = ref.watch(productRepositoryProvider);
   final db = ref.watch(appDatabaseProvider);
   return repo.watchAllProducts().asyncMap(
@@ -27,9 +26,8 @@ final productsStreamProvider = Provider<Stream<List<Product>>>((ref) {
   );
 });
 
-/// Watch products with search - instant SQL filtering
 final productSearchStreamProvider =
-    Provider.family<Stream<List<Product>>, String>((ref, query) {
+    StreamProvider.family<List<Product>, String>((ref, query) {
       final repo = ref.watch(productRepositoryProvider);
       final db = ref.watch(appDatabaseProvider);
       return repo
@@ -37,9 +35,8 @@ final productSearchStreamProvider =
           .asyncMap((list) => _enrichWithUnits(list, db));
     });
 
-/// Watch products by category ID
 final productsByCategoryStreamProvider =
-    Provider.family<Stream<List<Product>>, String>((ref, kategoriId) {
+    StreamProvider.family<List<Product>, String>((ref, kategoriId) {
       final repo = ref.watch(productRepositoryProvider);
       final db = ref.watch(appDatabaseProvider);
       return repo
@@ -47,9 +44,8 @@ final productsByCategoryStreamProvider =
           .asyncMap((list) => _enrichWithUnits(list, db));
     });
 
-/// Watch products by category + search (combined for 10k+ products)
 final productsByCategoryAndSearchStreamProvider =
-    Provider.family<Stream<List<Product>>, ({String kategoriId, String query})>((ref, params) {
+    StreamProvider.family<List<Product>, ({String kategoriId, String query})>((ref, params) {
       final repo = ref.watch(productRepositoryProvider);
       final db = ref.watch(appDatabaseProvider);
       return repo
