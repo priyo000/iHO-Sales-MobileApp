@@ -1423,15 +1423,29 @@ class AppDatabase extends _$AppDatabase {
           .go();
 
       // 2. Remove local records whose clientRef matches any incoming server ID
-      // (offline-created customers use their localRef as clientRef, and server
-      // stores it — so when server record comes back, we match by clientRef)
       await (delete(customersTable)
             ..where((t) =>
                 t.clientRef.isIn(serverIds) &
                 t.id.isNotIn(serverIds)))
           .go();
 
-      // 3. Also check RefIdMapTable as fallback
+      // 3. Remove local records whose clientRef matches incoming client_ref values
+      // (server returns client_ref field so we can match localRef-based rows)
+      final incomingClientRefs = customers
+          .map((c) => c['client_ref']?.toString())
+          .where((r) => r != null && r.isNotEmpty)
+          .cast<String>()
+          .toList();
+      if (incomingClientRefs.isNotEmpty) {
+        await (delete(customersTable)
+              ..where((t) =>
+                  (t.clientRef.isIn(incomingClientRefs) |
+                   t.id.isIn(incomingClientRefs)) &
+                  t.id.isNotIn(serverIds)))
+            .go();
+      }
+
+      // 4. Also check RefIdMapTable as fallback
       final mappings = await (select(refIdMapTable)
             ..where((t) => t.serverId.isIn(serverIds)))
           .get();

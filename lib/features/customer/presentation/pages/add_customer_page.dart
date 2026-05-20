@@ -10,6 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
+import '../../../../core/constants/customer_status.dart';
+import '../../../../core/constants/payment.dart';
 import '../../data/customer_repository.dart';
 import '../controllers/customer_controller.dart';
 import '../../../visit/presentation/controllers/visit_controller.dart';
@@ -73,7 +75,7 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   final _usahaGudangTelpController = TextEditingController();
   final _usahaGudangHpController = TextEditingController();
   final _usahaKontakGudangController = TextEditingController();
-  String _usahaCaraBayar = 'Tunai'; // Tunai, Giro, Transfer
+  String _usahaCaraBayar = PaymentMethod.tunai.code; // Tunai, Giro, Transfer
   final _usahaBankNamaController = TextEditingController();
   final _usahaBankCabangController = TextEditingController();
   final _usahaBankNoRekController = TextEditingController();
@@ -82,7 +84,7 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   // C. Diisi oleh salesman
   final _salesKreditAwalController = TextEditingController();
   final _salesKreditBerjalanController = TextEditingController();
-  String _salesSistemBayar = 'Cash'; // Cash / Kredit
+  String _salesSistemBayar = PaymentSystem.cash.code; // Cash / Credit
   final _salesTopController = TextEditingController();
   final _salesLainLainController = TextEditingController();
 
@@ -235,7 +237,7 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
         limitKreditAwal: double.tryParse(_salesKreditAwalController.text),
         catatanLain: _salesLainLainController.text,
 
-        status: 'pending', // Mark as pending initially or active if allowed
+        status: CustomerStatus.pending.code,
         storePhoto: _storePhoto,
         ktpPhoto: _ktpPhoto,
       );
@@ -254,27 +256,24 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
       );
 
       // Auto check-in to the new customer
-      final customerData = response['data'];
+      final customerData = response['data'] as Map<String, dynamic>? ?? {};
       final isOffline = response['is_offline'] == true;
 
-      // Strategy:
-      // - Online: response['server_id'] contains the server ID (int)
-      // - Offline: response['local_ref'] contains the local_ref (string)
-      // Use server_id for online (prevents double-listing in visits)
-      // Use local_ref for offline (will be patched after sync)
+      // Online: use server_id (matches Drift serverId for stream lookup)
+      // Offline: use local_ref (matches Drift primary key id)
       final serverId = response['server_id'];
-      final localRef = response['local_ref'] ?? customerData?['local_ref'];
+      final localRef = response['local_ref'] ?? customerData['local_ref'];
 
-      if (serverId != null || localRef != null) {
-        // Determine which ID to use: server_id (online) or local_ref (offline)
-        final pelangganId = serverId ?? localRef;
+      // The pelangganId for check-in and detail page lookup
+      // Must match what's stored in Drift so the stream provider can find it
+      final pelangganId = isOffline ? localRef : (serverId ?? localRef);
 
-        // Prepare customer data for check-in
+      if (pelangganId != null) {
         final pelangganDataMap = {
-          'nama_toko': customerData?['nama_toko'] ?? '',
-          'nama_pemilik': customerData?['nama_pemilik'] ?? '',
-          'alamat_usaha': customerData?['alamat_usaha'] ?? '',
-          'no_hp_pribadi': customerData?['no_hp_pribadi'] ?? '',
+          'nama_toko': customerData['nama_toko'] ?? _usahaNamaOutletController.text,
+          'nama_pemilik': customerData['nama_pemilik'] ?? _calonNamaPemilikController.text,
+          'alamat_usaha': customerData['alamat_usaha'] ?? _usahaAlamatController.text,
+          'no_hp_pribadi': customerData['no_hp_pribadi'] ?? _calonHpController.text,
           'is_offline': isOffline,
         };
 
@@ -282,37 +281,44 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
           final kunjunganId = await ref
               .read(visitControllerProvider.notifier)
               .checkIn(
-                jadwalId: null, // Unplanned visit
-                pelangganId:
-                    pelangganId, // String (local_ref) or int (server ID)
+                jadwalId: null,
+                pelangganId: pelangganId,
                 lat: _currentLocation.latitude,
                 long: _currentLocation.longitude,
-                jarakValidasi: 0.0, // Because they are right there
+                jarakValidasi: 0.0,
                 pelangganDataMap: pelangganDataMap,
               );
 
           if (mounted) {
-            // Show appropriate message based on online/offline
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
                   isOffline
                       ? 'Pelanggan disimpan offline. Check-in akan otomatis tersinkron.'
-                      : 'Pelanggan berhasil ditambahkan dan dikunjugi.',
+                      : 'Pelanggan berhasil ditambahkan dan dikunjungi.',
                 ),
                 backgroundColor: AppTheme.success,
               ),
             );
 
-            context.go('/schedule'); // Sets the back stack base
+            // Build pelanggan map with correct id for detail page lookup
+            final pelangganForDetail = {
+              ...customerData,
+              'id': pelangganId,
+              'nama_toko': customerData['nama_toko'] ?? _usahaNamaOutletController.text,
+              'nama_pemilik': customerData['nama_pemilik'] ?? _calonNamaPemilikController.text,
+              'alamat_usaha': customerData['alamat_usaha'] ?? _usahaAlamatController.text,
+              'no_hp_pribadi': customerData['no_hp_pribadi'] ?? _calonHpController.text,
+            };
 
-            // Allow go routing to settle before push
+            context.go('/schedule');
+
             Future.microtask(() {
               if (mounted) {
                 context.push(
                   '/customers/detail',
                   extra: {
-                    'pelanggan': customerData,
+                    'pelanggan': pelangganForDetail,
                     'id_kunjungan': kunjunganId.kunjunganId,
                     'waktu_check_in': DateTime.now().toIso8601String(),
                     'is_offline': isOffline,
@@ -322,7 +328,6 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
             });
           }
         } catch (e) {
-          // Checkin failed for some reason
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Check-in otomatis gagal: $e')),
@@ -331,7 +336,6 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
           }
         }
       } else {
-        // No ID available - redirect home
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1000,19 +1004,19 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
                     ),
                     Wrap(
                       spacing: 8,
-                      children: ['Tunai', 'Giro', 'Transfer'].map((type) {
+                      children: PaymentMethod.values.map((method) {
                         return ChoiceChip(
-                          label: Text(type),
-                          selected: _usahaCaraBayar == type,
+                          label: Text(method.code),
+                          selected: _usahaCaraBayar == method.code,
                           onSelected: (selected) {
                             if (selected) {
-                              setState(() => _usahaCaraBayar = type);
+                              setState(() => _usahaCaraBayar = method.code);
                             }
                           },
                         );
                       }).toList(),
                     ),
-                    if (_usahaCaraBayar != 'Tunai') ...[
+                    if (_usahaCaraBayar != PaymentMethod.tunai.code) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -1069,21 +1073,21 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
                     Row(
                       children: [
                         ChoiceChip(
-                          label: const Text('Cash'),
-                          selected: _salesSistemBayar == 'Cash',
+                          label: Text(PaymentSystem.cash.code),
+                          selected: _salesSistemBayar == PaymentSystem.cash.code,
                           onSelected: (selected) =>
-                              setState(() => _salesSistemBayar = 'Cash'),
+                              setState(() => _salesSistemBayar = PaymentSystem.cash.code),
                         ),
                         const SizedBox(width: 8),
                         ChoiceChip(
-                          label: const Text('Kredit'),
-                          selected: _salesSistemBayar == 'Kredit',
+                          label: Text(PaymentSystem.credit.code),
+                          selected: _salesSistemBayar == PaymentSystem.credit.code,
                           onSelected: (selected) =>
-                              setState(() => _salesSistemBayar = 'Kredit'),
+                              setState(() => _salesSistemBayar = PaymentSystem.credit.code),
                         ),
                       ],
                     ),
-                    if (_salesSistemBayar == 'Kredit')
+                    if (_salesSistemBayar == PaymentSystem.credit.code)
                       Padding(
                         padding: const EdgeInsets.only(top: 12.0),
                         child: Column(

@@ -1,14 +1,15 @@
 enum PaymentSystem {
   cash('Cash'),
-  kredit('Kredit');
+  credit('Credit');
 
   final String code;
   const PaymentSystem(this.code);
 
   static PaymentSystem? fromCode(String? code) {
     if (code == null || code.isEmpty) return null;
+    final lower = code.toLowerCase();
     return PaymentSystem.values.firstWhere(
-      (p) => p.code.toLowerCase() == code.toLowerCase(),
+      (p) => p.code.toLowerCase() == lower || p.name == lower,
       orElse: () => PaymentSystem.cash,
     );
   }

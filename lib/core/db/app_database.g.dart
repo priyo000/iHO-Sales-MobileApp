@@ -4582,6 +4582,17 @@ class $CustomersTableTable extends CustomersTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _clientRefMeta = const VerificationMeta(
+    'clientRef',
+  );
+  @override
+  late final GeneratedColumn<String> clientRef = GeneratedColumn<String>(
+    'client_ref',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _kodePelangganMeta = const VerificationMeta(
     'kodePelanggan',
   );
@@ -4871,6 +4882,7 @@ class $CustomersTableTable extends CustomersTable
     id,
     isLocal,
     serverId,
+    clientRef,
     kodePelanggan,
     namaToko,
     namaPemilik,
@@ -4925,6 +4937,12 @@ class $CustomersTableTable extends CustomersTable
       context.handle(
         _serverIdMeta,
         serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('client_ref')) {
+      context.handle(
+        _clientRefMeta,
+        clientRef.isAcceptableOrUnknown(data['client_ref']!, _clientRefMeta),
       );
     }
     if (data.containsKey('kode_pelanggan')) {
@@ -5150,6 +5168,10 @@ class $CustomersTableTable extends CustomersTable
         DriftSqlType.string,
         data['${effectivePrefix}server_id'],
       ),
+      clientRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_ref'],
+      ),
       kodePelanggan: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}kode_pelanggan'],
@@ -5268,6 +5290,7 @@ class CustomersTableData extends DataClass
   final String id;
   final int isLocal;
   final String? serverId;
+  final String? clientRef;
   final String? kodePelanggan;
   final String? namaToko;
   final String? namaPemilik;
@@ -5298,6 +5321,7 @@ class CustomersTableData extends DataClass
     required this.id,
     required this.isLocal,
     this.serverId,
+    this.clientRef,
     this.kodePelanggan,
     this.namaToko,
     this.namaPemilik,
@@ -5332,6 +5356,9 @@ class CustomersTableData extends DataClass
     map['is_local'] = Variable<int>(isLocal);
     if (!nullToAbsent || serverId != null) {
       map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || clientRef != null) {
+      map['client_ref'] = Variable<String>(clientRef);
     }
     if (!nullToAbsent || kodePelanggan != null) {
       map['kode_pelanggan'] = Variable<String>(kodePelanggan);
@@ -5417,6 +5444,9 @@ class CustomersTableData extends DataClass
       serverId: serverId == null && nullToAbsent
           ? const Value.absent()
           : Value(serverId),
+      clientRef: clientRef == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientRef),
       kodePelanggan: kodePelanggan == null && nullToAbsent
           ? const Value.absent()
           : Value(kodePelanggan),
@@ -5503,6 +5533,7 @@ class CustomersTableData extends DataClass
       id: serializer.fromJson<String>(json['id']),
       isLocal: serializer.fromJson<int>(json['isLocal']),
       serverId: serializer.fromJson<String?>(json['serverId']),
+      clientRef: serializer.fromJson<String?>(json['clientRef']),
       kodePelanggan: serializer.fromJson<String?>(json['kodePelanggan']),
       namaToko: serializer.fromJson<String?>(json['namaToko']),
       namaPemilik: serializer.fromJson<String?>(json['namaPemilik']),
@@ -5538,6 +5569,7 @@ class CustomersTableData extends DataClass
       'id': serializer.toJson<String>(id),
       'isLocal': serializer.toJson<int>(isLocal),
       'serverId': serializer.toJson<String?>(serverId),
+      'clientRef': serializer.toJson<String?>(clientRef),
       'kodePelanggan': serializer.toJson<String?>(kodePelanggan),
       'namaToko': serializer.toJson<String?>(namaToko),
       'namaPemilik': serializer.toJson<String?>(namaPemilik),
@@ -5571,6 +5603,7 @@ class CustomersTableData extends DataClass
     String? id,
     int? isLocal,
     Value<String?> serverId = const Value.absent(),
+    Value<String?> clientRef = const Value.absent(),
     Value<String?> kodePelanggan = const Value.absent(),
     Value<String?> namaToko = const Value.absent(),
     Value<String?> namaPemilik = const Value.absent(),
@@ -5601,6 +5634,7 @@ class CustomersTableData extends DataClass
     id: id ?? this.id,
     isLocal: isLocal ?? this.isLocal,
     serverId: serverId.present ? serverId.value : this.serverId,
+    clientRef: clientRef.present ? clientRef.value : this.clientRef,
     kodePelanggan: kodePelanggan.present
         ? kodePelanggan.value
         : this.kodePelanggan,
@@ -5647,6 +5681,7 @@ class CustomersTableData extends DataClass
       id: data.id.present ? data.id.value : this.id,
       isLocal: data.isLocal.present ? data.isLocal.value : this.isLocal,
       serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      clientRef: data.clientRef.present ? data.clientRef.value : this.clientRef,
       kodePelanggan: data.kodePelanggan.present
           ? data.kodePelanggan.value
           : this.kodePelanggan,
@@ -5714,6 +5749,7 @@ class CustomersTableData extends DataClass
           ..write('id: $id, ')
           ..write('isLocal: $isLocal, ')
           ..write('serverId: $serverId, ')
+          ..write('clientRef: $clientRef, ')
           ..write('kodePelanggan: $kodePelanggan, ')
           ..write('namaToko: $namaToko, ')
           ..write('namaPemilik: $namaPemilik, ')
@@ -5749,6 +5785,7 @@ class CustomersTableData extends DataClass
     id,
     isLocal,
     serverId,
+    clientRef,
     kodePelanggan,
     namaToko,
     namaPemilik,
@@ -5783,6 +5820,7 @@ class CustomersTableData extends DataClass
           other.id == this.id &&
           other.isLocal == this.isLocal &&
           other.serverId == this.serverId &&
+          other.clientRef == this.clientRef &&
           other.kodePelanggan == this.kodePelanggan &&
           other.namaToko == this.namaToko &&
           other.namaPemilik == this.namaPemilik &&
@@ -5815,6 +5853,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
   final Value<String> id;
   final Value<int> isLocal;
   final Value<String?> serverId;
+  final Value<String?> clientRef;
   final Value<String?> kodePelanggan;
   final Value<String?> namaToko;
   final Value<String?> namaPemilik;
@@ -5846,6 +5885,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     this.id = const Value.absent(),
     this.isLocal = const Value.absent(),
     this.serverId = const Value.absent(),
+    this.clientRef = const Value.absent(),
     this.kodePelanggan = const Value.absent(),
     this.namaToko = const Value.absent(),
     this.namaPemilik = const Value.absent(),
@@ -5878,6 +5918,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     required String id,
     this.isLocal = const Value.absent(),
     this.serverId = const Value.absent(),
+    this.clientRef = const Value.absent(),
     this.kodePelanggan = const Value.absent(),
     this.namaToko = const Value.absent(),
     this.namaPemilik = const Value.absent(),
@@ -5912,6 +5953,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     Expression<String>? id,
     Expression<int>? isLocal,
     Expression<String>? serverId,
+    Expression<String>? clientRef,
     Expression<String>? kodePelanggan,
     Expression<String>? namaToko,
     Expression<String>? namaPemilik,
@@ -5944,6 +5986,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
       if (id != null) 'id': id,
       if (isLocal != null) 'is_local': isLocal,
       if (serverId != null) 'server_id': serverId,
+      if (clientRef != null) 'client_ref': clientRef,
       if (kodePelanggan != null) 'kode_pelanggan': kodePelanggan,
       if (namaToko != null) 'nama_toko': namaToko,
       if (namaPemilik != null) 'nama_pemilik': namaPemilik,
@@ -5978,6 +6021,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     Value<String>? id,
     Value<int>? isLocal,
     Value<String?>? serverId,
+    Value<String?>? clientRef,
     Value<String?>? kodePelanggan,
     Value<String?>? namaToko,
     Value<String?>? namaPemilik,
@@ -6010,6 +6054,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
       id: id ?? this.id,
       isLocal: isLocal ?? this.isLocal,
       serverId: serverId ?? this.serverId,
+      clientRef: clientRef ?? this.clientRef,
       kodePelanggan: kodePelanggan ?? this.kodePelanggan,
       namaToko: namaToko ?? this.namaToko,
       namaPemilik: namaPemilik ?? this.namaPemilik,
@@ -6051,6 +6096,9 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     }
     if (serverId.present) {
       map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (clientRef.present) {
+      map['client_ref'] = Variable<String>(clientRef.value);
     }
     if (kodePelanggan.present) {
       map['kode_pelanggan'] = Variable<String>(kodePelanggan.value);
@@ -6142,6 +6190,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
           ..write('id: $id, ')
           ..write('isLocal: $isLocal, ')
           ..write('serverId: $serverId, ')
+          ..write('clientRef: $clientRef, ')
           ..write('kodePelanggan: $kodePelanggan, ')
           ..write('namaToko: $namaToko, ')
           ..write('namaPemilik: $namaPemilik, ')
@@ -7837,6 +7886,17 @@ class $ScheduleTableTable extends ScheduleTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _namaRuteMeta = const VerificationMeta(
+    'namaRute',
+  );
+  @override
+  late final GeneratedColumn<String> namaRute = GeneratedColumn<String>(
+    'nama_rute',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _urutanMeta = const VerificationMeta('urutan');
   @override
   late final GeneratedColumn<int> urutan = GeneratedColumn<int>(
@@ -7909,6 +7969,7 @@ class $ScheduleTableTable extends ScheduleTable
     tanggal,
     divisiId,
     pelangganId,
+    namaRute,
     urutan,
     status,
     waktuCheckIn,
@@ -7971,6 +8032,12 @@ class $ScheduleTableTable extends ScheduleTable
       );
     } else if (isInserting) {
       context.missing(_pelangganIdMeta);
+    }
+    if (data.containsKey('nama_rute')) {
+      context.handle(
+        _namaRuteMeta,
+        namaRute.isAcceptableOrUnknown(data['nama_rute']!, _namaRuteMeta),
+      );
     }
     if (data.containsKey('urutan')) {
       context.handle(
@@ -8051,6 +8118,10 @@ class $ScheduleTableTable extends ScheduleTable
         DriftSqlType.string,
         data['${effectivePrefix}pelanggan_id'],
       )!,
+      namaRute: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nama_rute'],
+      ),
       urutan: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}urutan'],
@@ -8092,6 +8163,7 @@ class ScheduleTableData extends DataClass
   final String tanggal;
   final String? divisiId;
   final String pelangganId;
+  final String? namaRute;
   final int urutan;
   final String status;
   final String? waktuCheckIn;
@@ -8105,6 +8177,7 @@ class ScheduleTableData extends DataClass
     required this.tanggal,
     this.divisiId,
     required this.pelangganId,
+    this.namaRute,
     required this.urutan,
     required this.status,
     this.waktuCheckIn,
@@ -8125,6 +8198,9 @@ class ScheduleTableData extends DataClass
       map['divisi_id'] = Variable<String>(divisiId);
     }
     map['pelanggan_id'] = Variable<String>(pelangganId);
+    if (!nullToAbsent || namaRute != null) {
+      map['nama_rute'] = Variable<String>(namaRute);
+    }
     map['urutan'] = Variable<int>(urutan);
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || waktuCheckIn != null) {
@@ -8150,6 +8226,9 @@ class ScheduleTableData extends DataClass
           ? const Value.absent()
           : Value(divisiId),
       pelangganId: Value(pelangganId),
+      namaRute: namaRute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(namaRute),
       urutan: Value(urutan),
       status: Value(status),
       waktuCheckIn: waktuCheckIn == null && nullToAbsent
@@ -8175,6 +8254,7 @@ class ScheduleTableData extends DataClass
       tanggal: serializer.fromJson<String>(json['tanggal']),
       divisiId: serializer.fromJson<String?>(json['divisiId']),
       pelangganId: serializer.fromJson<String>(json['pelangganId']),
+      namaRute: serializer.fromJson<String?>(json['namaRute']),
       urutan: serializer.fromJson<int>(json['urutan']),
       status: serializer.fromJson<String>(json['status']),
       waktuCheckIn: serializer.fromJson<String?>(json['waktuCheckIn']),
@@ -8193,6 +8273,7 @@ class ScheduleTableData extends DataClass
       'tanggal': serializer.toJson<String>(tanggal),
       'divisiId': serializer.toJson<String?>(divisiId),
       'pelangganId': serializer.toJson<String>(pelangganId),
+      'namaRute': serializer.toJson<String?>(namaRute),
       'urutan': serializer.toJson<int>(urutan),
       'status': serializer.toJson<String>(status),
       'waktuCheckIn': serializer.toJson<String?>(waktuCheckIn),
@@ -8209,6 +8290,7 @@ class ScheduleTableData extends DataClass
     String? tanggal,
     Value<String?> divisiId = const Value.absent(),
     String? pelangganId,
+    Value<String?> namaRute = const Value.absent(),
     int? urutan,
     String? status,
     Value<String?> waktuCheckIn = const Value.absent(),
@@ -8222,6 +8304,7 @@ class ScheduleTableData extends DataClass
     tanggal: tanggal ?? this.tanggal,
     divisiId: divisiId.present ? divisiId.value : this.divisiId,
     pelangganId: pelangganId ?? this.pelangganId,
+    namaRute: namaRute.present ? namaRute.value : this.namaRute,
     urutan: urutan ?? this.urutan,
     status: status ?? this.status,
     waktuCheckIn: waktuCheckIn.present ? waktuCheckIn.value : this.waktuCheckIn,
@@ -8243,6 +8326,7 @@ class ScheduleTableData extends DataClass
       pelangganId: data.pelangganId.present
           ? data.pelangganId.value
           : this.pelangganId,
+      namaRute: data.namaRute.present ? data.namaRute.value : this.namaRute,
       urutan: data.urutan.present ? data.urutan.value : this.urutan,
       status: data.status.present ? data.status.value : this.status,
       waktuCheckIn: data.waktuCheckIn.present
@@ -8265,6 +8349,7 @@ class ScheduleTableData extends DataClass
           ..write('tanggal: $tanggal, ')
           ..write('divisiId: $divisiId, ')
           ..write('pelangganId: $pelangganId, ')
+          ..write('namaRute: $namaRute, ')
           ..write('urutan: $urutan, ')
           ..write('status: $status, ')
           ..write('waktuCheckIn: $waktuCheckIn, ')
@@ -8283,6 +8368,7 @@ class ScheduleTableData extends DataClass
     tanggal,
     divisiId,
     pelangganId,
+    namaRute,
     urutan,
     status,
     waktuCheckIn,
@@ -8300,6 +8386,7 @@ class ScheduleTableData extends DataClass
           other.tanggal == this.tanggal &&
           other.divisiId == this.divisiId &&
           other.pelangganId == this.pelangganId &&
+          other.namaRute == this.namaRute &&
           other.urutan == this.urutan &&
           other.status == this.status &&
           other.waktuCheckIn == this.waktuCheckIn &&
@@ -8315,6 +8402,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
   final Value<String> tanggal;
   final Value<String?> divisiId;
   final Value<String> pelangganId;
+  final Value<String?> namaRute;
   final Value<int> urutan;
   final Value<String> status;
   final Value<String?> waktuCheckIn;
@@ -8329,6 +8417,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
     this.tanggal = const Value.absent(),
     this.divisiId = const Value.absent(),
     this.pelangganId = const Value.absent(),
+    this.namaRute = const Value.absent(),
     this.urutan = const Value.absent(),
     this.status = const Value.absent(),
     this.waktuCheckIn = const Value.absent(),
@@ -8344,6 +8433,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
     required String tanggal,
     this.divisiId = const Value.absent(),
     required String pelangganId,
+    this.namaRute = const Value.absent(),
     this.urutan = const Value.absent(),
     this.status = const Value.absent(),
     this.waktuCheckIn = const Value.absent(),
@@ -8364,6 +8454,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
     Expression<String>? tanggal,
     Expression<String>? divisiId,
     Expression<String>? pelangganId,
+    Expression<String>? namaRute,
     Expression<int>? urutan,
     Expression<String>? status,
     Expression<String>? waktuCheckIn,
@@ -8379,6 +8470,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
       if (tanggal != null) 'tanggal': tanggal,
       if (divisiId != null) 'divisi_id': divisiId,
       if (pelangganId != null) 'pelanggan_id': pelangganId,
+      if (namaRute != null) 'nama_rute': namaRute,
       if (urutan != null) 'urutan': urutan,
       if (status != null) 'status': status,
       if (waktuCheckIn != null) 'waktu_check_in': waktuCheckIn,
@@ -8396,6 +8488,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
     Value<String>? tanggal,
     Value<String?>? divisiId,
     Value<String>? pelangganId,
+    Value<String?>? namaRute,
     Value<int>? urutan,
     Value<String>? status,
     Value<String?>? waktuCheckIn,
@@ -8411,6 +8504,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
       tanggal: tanggal ?? this.tanggal,
       divisiId: divisiId ?? this.divisiId,
       pelangganId: pelangganId ?? this.pelangganId,
+      namaRute: namaRute ?? this.namaRute,
       urutan: urutan ?? this.urutan,
       status: status ?? this.status,
       waktuCheckIn: waktuCheckIn ?? this.waktuCheckIn,
@@ -8441,6 +8535,9 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
     }
     if (pelangganId.present) {
       map['pelanggan_id'] = Variable<String>(pelangganId.value);
+    }
+    if (namaRute.present) {
+      map['nama_rute'] = Variable<String>(namaRute.value);
     }
     if (urutan.present) {
       map['urutan'] = Variable<int>(urutan.value);
@@ -8475,6 +8572,7 @@ class ScheduleTableCompanion extends UpdateCompanion<ScheduleTableData> {
           ..write('tanggal: $tanggal, ')
           ..write('divisiId: $divisiId, ')
           ..write('pelangganId: $pelangganId, ')
+          ..write('namaRute: $namaRute, ')
           ..write('urutan: $urutan, ')
           ..write('status: $status, ')
           ..write('waktuCheckIn: $waktuCheckIn, ')
@@ -11967,6 +12065,7 @@ typedef $$CustomersTableTableCreateCompanionBuilder =
       required String id,
       Value<int> isLocal,
       Value<String?> serverId,
+      Value<String?> clientRef,
       Value<String?> kodePelanggan,
       Value<String?> namaToko,
       Value<String?> namaPemilik,
@@ -12000,6 +12099,7 @@ typedef $$CustomersTableTableUpdateCompanionBuilder =
       Value<String> id,
       Value<int> isLocal,
       Value<String?> serverId,
+      Value<String?> clientRef,
       Value<String?> kodePelanggan,
       Value<String?> namaToko,
       Value<String?> namaPemilik,
@@ -12050,6 +12150,11 @@ class $$CustomersTableTableFilterComposer
 
   ColumnFilters<String> get serverId => $composableBuilder(
     column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientRef => $composableBuilder(
+    column: $table.clientRef,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12208,6 +12313,11 @@ class $$CustomersTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get clientRef => $composableBuilder(
+    column: $table.clientRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get kodePelanggan => $composableBuilder(
     column: $table.kodePelanggan,
     builder: (column) => ColumnOrderings(column),
@@ -12356,6 +12466,9 @@ class $$CustomersTableTableAnnotationComposer
 
   GeneratedColumn<String> get serverId =>
       $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<String> get clientRef =>
+      $composableBuilder(column: $table.clientRef, builder: (column) => column);
 
   GeneratedColumn<String> get kodePelanggan => $composableBuilder(
     column: $table.kodePelanggan,
@@ -12508,6 +12621,7 @@ class $$CustomersTableTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<int> isLocal = const Value.absent(),
                 Value<String?> serverId = const Value.absent(),
+                Value<String?> clientRef = const Value.absent(),
                 Value<String?> kodePelanggan = const Value.absent(),
                 Value<String?> namaToko = const Value.absent(),
                 Value<String?> namaPemilik = const Value.absent(),
@@ -12539,6 +12653,7 @@ class $$CustomersTableTableTableManager
                 id: id,
                 isLocal: isLocal,
                 serverId: serverId,
+                clientRef: clientRef,
                 kodePelanggan: kodePelanggan,
                 namaToko: namaToko,
                 namaPemilik: namaPemilik,
@@ -12572,6 +12687,7 @@ class $$CustomersTableTableTableManager
                 required String id,
                 Value<int> isLocal = const Value.absent(),
                 Value<String?> serverId = const Value.absent(),
+                Value<String?> clientRef = const Value.absent(),
                 Value<String?> kodePelanggan = const Value.absent(),
                 Value<String?> namaToko = const Value.absent(),
                 Value<String?> namaPemilik = const Value.absent(),
@@ -12603,6 +12719,7 @@ class $$CustomersTableTableTableManager
                 id: id,
                 isLocal: isLocal,
                 serverId: serverId,
+                clientRef: clientRef,
                 kodePelanggan: kodePelanggan,
                 namaToko: namaToko,
                 namaPemilik: namaPemilik,
@@ -13495,6 +13612,7 @@ typedef $$ScheduleTableTableCreateCompanionBuilder =
       required String tanggal,
       Value<String?> divisiId,
       required String pelangganId,
+      Value<String?> namaRute,
       Value<int> urutan,
       Value<String> status,
       Value<String?> waktuCheckIn,
@@ -13511,6 +13629,7 @@ typedef $$ScheduleTableTableUpdateCompanionBuilder =
       Value<String> tanggal,
       Value<String?> divisiId,
       Value<String> pelangganId,
+      Value<String?> namaRute,
       Value<int> urutan,
       Value<String> status,
       Value<String?> waktuCheckIn,
@@ -13556,6 +13675,11 @@ class $$ScheduleTableTableFilterComposer
 
   ColumnFilters<String> get pelangganId => $composableBuilder(
     column: $table.pelangganId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get namaRute => $composableBuilder(
+    column: $table.namaRute,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13629,6 +13753,11 @@ class $$ScheduleTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get namaRute => $composableBuilder(
+    column: $table.namaRute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get urutan => $composableBuilder(
     column: $table.urutan,
     builder: (column) => ColumnOrderings(column),
@@ -13690,6 +13819,9 @@ class $$ScheduleTableTableAnnotationComposer
     column: $table.pelangganId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get namaRute =>
+      $composableBuilder(column: $table.namaRute, builder: (column) => column);
 
   GeneratedColumn<int> get urutan =>
       $composableBuilder(column: $table.urutan, builder: (column) => column);
@@ -13755,6 +13887,7 @@ class $$ScheduleTableTableTableManager
                 Value<String> tanggal = const Value.absent(),
                 Value<String?> divisiId = const Value.absent(),
                 Value<String> pelangganId = const Value.absent(),
+                Value<String?> namaRute = const Value.absent(),
                 Value<int> urutan = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> waktuCheckIn = const Value.absent(),
@@ -13769,6 +13902,7 @@ class $$ScheduleTableTableTableManager
                 tanggal: tanggal,
                 divisiId: divisiId,
                 pelangganId: pelangganId,
+                namaRute: namaRute,
                 urutan: urutan,
                 status: status,
                 waktuCheckIn: waktuCheckIn,
@@ -13785,6 +13919,7 @@ class $$ScheduleTableTableTableManager
                 required String tanggal,
                 Value<String?> divisiId = const Value.absent(),
                 required String pelangganId,
+                Value<String?> namaRute = const Value.absent(),
                 Value<int> urutan = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> waktuCheckIn = const Value.absent(),
@@ -13799,6 +13934,7 @@ class $$ScheduleTableTableTableManager
                 tanggal: tanggal,
                 divisiId: divisiId,
                 pelangganId: pelangganId,
+                namaRute: namaRute,
                 urutan: urutan,
                 status: status,
                 waktuCheckIn: waktuCheckIn,

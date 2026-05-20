@@ -254,6 +254,7 @@ class CustomerMutation {
       if (latitude != null) 'latitude': latitude.toString(),
       if (longitude != null) 'longitude': longitude.toString(),
       'status': resolvedStatus,
+      'client_ref': localRef,
       if (noKtpPemilik?.isNotEmpty == true) 'no_ktp_pemilik': noKtpPemilik,
       if (tempatLahirPemilik?.isNotEmpty == true) 'tempat_lahir_pemilik': tempatLahirPemilik,
       if (tanggalLahirPemilik?.isNotEmpty == true) 'tanggal_lahir_pemilik': tanggalLahirPemilik,
@@ -292,7 +293,6 @@ class CustomerMutation {
 
     await _db.saveCustomer(
       id: localRef,
-      clientRef: localRef,
       namaToko: namaToko,
       namaPemilik: namaPemilik,
       noHpPribadi: noHpPribadi,
@@ -354,7 +354,7 @@ class CustomerMutation {
     }
 
     payload['_drift_record_id'] = localRef;
-    final syncRef = await _sync.enqueueCreatePelanggan(
+    await _sync.enqueueCreatePelanggan(
       endpoint: _endpointPelanggan,
       payload: payload,
     );
@@ -363,8 +363,16 @@ class CustomerMutation {
     triggerSync();
 
     return {
-      'data': {'nama_toko': namaToko, 'status': resolvedStatus},
-      'local_ref': syncRef,
+      'data': {
+        'id': localRef,
+        'nama_toko': namaToko,
+        'nama_pemilik': namaPemilik,
+        'no_hp_pribadi': noHpPribadi,
+        'alamat_usaha': alamatUsaha,
+        'status': resolvedStatus,
+        'local_ref': localRef,
+      },
+      'local_ref': localRef,
       'is_offline': true,
     };
   }
