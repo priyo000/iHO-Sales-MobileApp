@@ -158,17 +158,6 @@ class ScheduleRepository {
 
     log('[Schedule SSOT] 🔄 Starting sync for $today (forceRefresh=$forceRefresh)');
 
-    // Skip if not force refresh and data already exists
-    if (!forceRefresh) {
-      final existing = await _db.getScheduleForDate(today);
-      if (existing.isNotEmpty) {
-        log(
-          '[Schedule SSOT] Schedule already cached for $today (${existing.length} items), skipping sync.',
-        );
-        return;
-      }
-    }
-
     try {
       final queryParams = <String, dynamic>{};
       if (dateParam != null) queryParams['date'] = dateParam;
@@ -258,7 +247,7 @@ class ScheduleRepository {
                 updatedAt: _parseIsoToEpochMs(pelanggan['updated_at']),
               );
               log(
-                '[Schedule SSOT] Upserted customer ${pelangganServerId} from embedded data',
+                '[Schedule SSOT] Upserted customer $pelangganServerId from embedded data',
               );
             } else {
               log(
@@ -294,11 +283,16 @@ class ScheduleRepository {
 
           // For visits that exist on server (id_kunjungan present), ensure they exist in local VisitsTable.
           // This handles: app data cleared but visit still active on server (unplanned or planned).
-          if (serverKunjunganId != null && pelangganId != null) {
+          if (serverKunjunganId != null) {
             if (pendingVisitIds.contains(serverKunjunganId) ||
                 (clientRef != null && pendingVisitIds.contains(clientRef))) {
               log('[Schedule SSOT] ⏭️ Skip visit $serverKunjunganId — pending check_out');
             } else {
+              // Remove local visit record that was created with clientRef as ID
+              // to prevent duplicates (local record has id=clientRef, server has id=serverKunjunganId)
+              if (clientRef != null) {
+                await _db.deleteVisit(clientRef);
+              }
               await _db.saveVisit(
                 id: serverKunjunganId,
                 scheduleId: jadwalId,
@@ -343,6 +337,7 @@ class ScheduleRepository {
             tanggal: today,
             divisiId: _parseScheduleId(scheduleData['id_divisi']),
             pelangganId: pelangganId,
+            namaRute: (scheduleData['rute'] as Map?)?['nama'] as String?,
             urutan: _parseScheduleInt(scheduleData['urutan']) ?? 0,
             status: scheduleStatus,
             waktuCheckIn: waktuCheckIn,
@@ -391,6 +386,9 @@ class ScheduleRepository {
   }
 
   /// Update schedule status (visited, skipped, etc.)
+  ///
+  /// Writes locally first (SSOT), then enqueues a server sync mutation
+  /// so the backend's jadwal record stays in step with local visit state.
   Future<void> updateStatus({
     required String id,
     required String status,
@@ -402,6 +400,16 @@ class ScheduleRepository {
       status,
       waktuCheckIn: waktuCheckIn,
       waktuCheckOut: waktuCheckOut,
+    );
+
+    await _sync.enqueueUpdateScheduleStatus(
+      endpoint: '${ApiConstants.jadwal}/$id/status',
+      payload: <String, dynamic>{
+        'id_jadwal': id,
+        'status': status,
+        'waktu_check_in': ?waktuCheckIn,
+        'waktu_check_out': ?waktuCheckOut,
+      },
     );
   }
 

@@ -142,6 +142,17 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
     );
   }
 
+  Future<void> resetForRetry(String localRef) async {
+    await (update(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
+        .write(
+      const SyncQueueTableCompanion(
+        retryCount: Value(0),
+        status: Value('pending'),
+        errorMessage: Value(null),
+      ),
+    );
+  }
+
   Future<void> removeFromQueue(String localRef) async {
     await (delete(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
         .go();

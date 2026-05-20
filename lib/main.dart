@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sales_tracker_mobile/core/router/app_router.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
@@ -22,6 +23,8 @@ void main() async {
 
   // Kunci orientasi ke Portrait saja
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  await initializeDateFormatting('id_ID', null);
 
   // ── Parallel Init ──────────────────────────────────────────────────────────
   // Firebase dan Drift database diinisialisasi bersamaan — hemat ~100–300ms startup

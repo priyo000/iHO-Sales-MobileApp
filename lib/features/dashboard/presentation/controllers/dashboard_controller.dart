@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/dashboard_repository.dart';
 import '../../../customer/presentation/controllers/customer_controller.dart';
 import '../../../../core/services/sync_service.dart';
+import '../../../../core/services/preload_service.dart';
 import '../../../../core/auth/user_provider.dart';
 
 final dashboardControllerProvider =
@@ -26,6 +27,13 @@ class DashboardController extends AsyncNotifier<Map<String, dynamic>> {
     // SSOT: Auto refresh dashboard when sync queue changes
     ref.listen(pendingSyncCountProvider, (previous, next) {
       if (next is AsyncData && !state.isLoading) {
+        refresh();
+      }
+    });
+
+    // SSOT: Auto refresh dashboard when preload completes
+    ref.listen(preloadCompleteCountProvider, (previous, next) {
+      if (previous != null && next > previous && !state.isLoading) {
         refresh();
       }
     });

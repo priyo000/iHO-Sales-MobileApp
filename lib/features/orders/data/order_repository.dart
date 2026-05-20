@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/constants/order_status.dart';
 import '../../../../core/services/connectivity_service.dart';
 import '../../../../core/services/sync_service.dart';
 import '../../../../core/services/mutation_queue_service.dart';
@@ -210,20 +211,31 @@ class OrderRepository {
                 (p['payload'] as Map)['_local_order_id'].toString(),
           };
 
+          // Batch-load all orders once to avoid N+1 lookups inside the loop.
+          // Build lookup maps for O(1) access by clientRef / serverId / noPesanan.
+          final allOrders = await _db.getAllOrders();
+          final byClientRef = <String, OrdersTableData>{};
+          final byServerId = <String, OrdersTableData>{};
+          final byNoPesanan = <String, OrdersTableData>{};
+          for (final o in allOrders) {
+            if (o.clientRef != null) byClientRef[o.clientRef!] = o;
+            if (o.serverId != null) byServerId[o.serverId!] = o;
+            if (o.noPesanan != null) byNoPesanan[o.noPesanan!] = o;
+          }
+
           int savedCount = 0;
-          int skippedCount = 0;
           for (final item in dataList) {
             final serverId = item['id']?.toString();
             final noPesanan = item['no_pesanan']?.toString();
             final clientRef = item['client_ref']?.toString();
             final existingOrder = clientRef != null
-                ? await _db.getOrderByClientRef(clientRef)
+                ? byClientRef[clientRef]
                 : null;
             final existingByServerId = serverId != null
-                ? await _db.getOrderByServerId(serverId)
+                ? byServerId[serverId]
                 : null;
             final existingByNoPesanan = noPesanan != null
-                ? await _db.getOrderByNoPesanan(noPesanan)
+                ? byNoPesanan[noPesanan]
                 : null;
             final orderId =
                 existingOrder?.id ??
@@ -236,11 +248,10 @@ class OrderRepository {
               debugPrint(
                 '[OrderRepo] ⏭️ Skip overwrite: $orderId has pending mutation',
               );
-              skippedCount++;
               continue;
             }
 
-            final status = item['status'] ?? 'PENDING';
+            final status = item['status'] ?? OrderStatus.pending.code;
             debugPrint(
               '[OrderRepo] 💾 Saving order: id=$orderId, no_pesanan=$noPesanan, status=$status',
             );

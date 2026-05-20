@@ -29,6 +29,17 @@ class DashboardRepository {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
+  Future<String?> _getRouteName(String scheduleId) async {
+    final rows = await _db.rawQuery(
+      'SELECT nama_rute FROM schedule_table WHERE id = ?',
+      whereArgs: [scheduleId],
+    );
+    if (rows.isNotEmpty) {
+      return rows.first['nama_rute'] as String?;
+    }
+    return null;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // READ: Compute dashboard stats from Drift tables (SSOT)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -125,6 +136,11 @@ class DashboardRepository {
       // Calculate effective calls
       final effectiveCalls = await _db.getEffectiveCallsInRange(today, today);
 
+      // Hit rate = (effective calls / total visits) * 100
+      final hitRatePercentage = totalVisitsToday > 0
+          ? ((effectiveCalls / totalVisitsToday) * 100).round()
+          : 0;
+
       // Calculate total sales today
       final totalSalesToday = await _db.getOrdersTotalInRange(today, today);
 
@@ -148,6 +164,7 @@ class DashboardRepository {
         'pelanggan_baru_hari_ini': newCustomersCount,
         'prospek_hari_ini': prospectCount,
         'effective_calls': effectiveCalls,
+        'hit_rate_percentage': hitRatePercentage,
         'total_sales_today': totalSalesToday,
         'pending_sync_count':
             pendingCheckOuts.length +
@@ -161,7 +178,8 @@ class DashboardRepository {
         'rute_hari_ini': todaySchedule.isNotEmpty
             ? {
                 'id': todaySchedule.first.id,
-                'name': 'Rute Hari Ini',
+                'name': await _getRouteName(todaySchedule.first.id) ?? 'Rute Hari Ini',
+                'keterangan': '$scheduledVisits titik kunjungan',
                 'total_titik': scheduledVisits,
                 'dikunjungi': plannedCheckedOut,
                 'sisa': scheduledVisits - plannedCheckedOut,

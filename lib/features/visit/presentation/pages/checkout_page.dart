@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:sales_tracker_mobile/core/services/location_service.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -83,18 +84,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   Future<void> _fetchLocation() async {
     setState(() => _isLocationLoading = true);
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-      if (permission == LocationPermission.deniedForever) return;
-
-      final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      final Position position = await LocationService.getCurrentWithPermission();
 
       const Distance distance = Distance();
       final double meterDistance = distance.as(

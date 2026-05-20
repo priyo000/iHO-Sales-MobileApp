@@ -5,6 +5,7 @@ import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:sales_tracker_mobile/core/services/location_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -401,46 +402,17 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   }
 
   Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
+    final Position position;
+    try {
+      position = await LocationService.getCurrentWithPermission();
+    } on LocationException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location services are disabled.')),
+          SnackBar(content: Text(e.message)),
         );
       }
       return;
     }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permissions are denied')),
-          );
-        }
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location permissions are permanently denied, we cannot request permissions.',
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
-    Position position = await Geolocator.getCurrentPosition();
     LatLng newPos = LatLng(position.latitude, position.longitude);
     _mapController.move(newPos, 15);
     _updateAddressFromLocation(newPos);

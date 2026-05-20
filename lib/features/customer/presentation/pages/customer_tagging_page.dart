@@ -5,7 +5,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:sales_tracker_mobile/core/services/location_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -272,17 +272,7 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
   Future<void> _useCurrentLocation() async {
     setState(() => _isLoading = true);
     try {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        await Geolocator.requestPermission();
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      final position = await LocationService.getCurrentWithPermission();
       final newLoc = LatLng(position.latitude, position.longitude);
 
       setState(() => _selectedLocation = newLoc);

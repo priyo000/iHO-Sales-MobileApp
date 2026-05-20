@@ -25,6 +25,8 @@ import '../../features/notifications/data/notifications_repository.dart';
 //   - Semua berjalan di background, tidak blocking UI
 // ─────────────────────────────────────────────────────────────────────────────
 
+final preloadCompleteCountProvider = StateProvider<int>((ref) => 0);
+
 final preloadServiceProvider = Provider<PreloadService>((ref) {
   return PreloadService(
     ref.read(db.appDatabaseProvider),
@@ -37,6 +39,7 @@ final preloadServiceProvider = Provider<PreloadService>((ref) {
     ref.read(scheduleRepositoryProvider),
     ref.read(promoRepositoryProvider),
     ref.read(notificationsRepositoryProvider),
+    onComplete: () => ref.read(preloadCompleteCountProvider.notifier).state++,
   );
 });
 
@@ -60,6 +63,7 @@ class PreloadService {
   final ScheduleRepository _scheduleRepo;
   final PromoRepository _promoRepo;
   final NotificationsRepository _notificationsRepo;
+  final VoidCallback? _onComplete;
 
   bool _isSyncing = false;
 
@@ -73,8 +77,9 @@ class PreloadService {
     this._orderRepo,
     this._scheduleRepo,
     this._promoRepo,
-    this._notificationsRepo,
-  );
+    this._notificationsRepo, {
+    VoidCallback? onComplete,
+  }) : _onComplete = onComplete;
 
   // ── Public entry point ──────────────────────────────────────────────────────
 
@@ -140,6 +145,7 @@ class PreloadService {
           _preloadNotifications(), // Sync notifications from API
         ]);
         debugPrint('[Preload] ✅ Preload completed successfully');
+        _onComplete?.call();
         return;
       }
 
@@ -190,6 +196,7 @@ class PreloadService {
       debugPrint('[Preload] ❌ Stack trace: $st');
     } finally {
       _isSyncing = false;
+      _onComplete?.call();
     }
   }
 
