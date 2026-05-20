@@ -165,12 +165,12 @@ class SyncService {
   Stream<int> get pendingCountStream => _pendingCountController.stream;
 
   Future<int> getPendingCountSnapshot() async {
-    return _localDb.getPendingCount();
+    return _localDb.syncDao.getPendingCount();
   }
 
   /// Ambil item yang sudah gagal melebihi batas retry (untuk ditampilkan ke user)
   Future<List<Map<String, dynamic>>> getFailedItems() async {
-    final allItems = await _localDb.getAllQueueItems();
+    final allItems = await _localDb.syncDao.getAllQueueItems();
     final failedItems = allItems.where(
       (item) => item.status == 'failed' || item.status == 'failed_permanently',
     );
@@ -179,7 +179,7 @@ class SyncService {
 
   /// Hapus item yang sudah gagal permanen (dipakai dari UI)
   Future<void> discardFailed(String localRef) async {
-    await _localDb.removeFromQueue(localRef);
+    await _localDb.syncDao.removeFromQueue(localRef);
     await _broadcastPendingCount();
     log('[SyncService] 🗑️ Item gagal dihapus manual: $localRef');
   }
@@ -194,7 +194,7 @@ class SyncService {
 
   /// Ambil item pending berdasarkan local_ref
   Future<Map<String, dynamic>?> getPendingItem(String localRef) async {
-    final allItems = await _localDb.getAllQueueItems();
+    final allItems = await _localDb.syncDao.getAllQueueItems();
     final item = allItems
         .where(
           (i) =>
@@ -211,7 +211,7 @@ class SyncService {
   Map<String, dynamic> syncQueueItemToMap(SyncQueueTableData item) =>
       _syncQueueItemToMap(item);
 
-  /// Convert SyncQueueTableData to Map<String, dynamic>
+  /// Convert SyncQueueTableData to `Map<String, dynamic>`
   Map<String, dynamic> _syncQueueItemToMap(SyncQueueTableData item) {
     return {
       'id': item.id,
@@ -233,21 +233,18 @@ class SyncService {
     String localRef,
     Map<String, dynamic> payload,
   ) async {
-    await _localDb.updatePayload(localRef, payload);
+    await _localDb.syncDao.updatePayload(localRef, payload);
   }
 
   Future<void> removePendingItem(String localRef) async {
-    await _localDb.removeFromQueue(localRef);
+    await _localDb.syncDao.removeFromQueue(localRef);
     _deferCount.remove(localRef);
     await _broadcastPendingCount();
   }
 
   /// Reset retry count agar item gagal bisa dicoba lagi
   Future<void> retryFailed(String localRef) async {
-    await _localDb.rawUpdate(
-      'UPDATE ${AppDatabase.tableSyncQueue} SET retry_count = 0, status = ?, error_message = NULL WHERE local_ref = ?',
-      whereArgs: ['pending', localRef],
-    );
+    await _localDb.syncDao.resetForRetry(localRef);
     log('[SyncService] 🔄 Retry manual: $localRef');
     syncAll();
   }
@@ -257,7 +254,7 @@ class SyncService {
     String localRef,
     Map<String, dynamic> newPayload,
   ) async {
-    await _localDb.updatePayload(localRef, newPayload);
+    await _localDb.syncDao.updatePayload(localRef, newPayload);
 
     // Setelah diupdate, reset error state dan jadikan pending
     await _localDb.rawUpdate(
@@ -275,7 +272,7 @@ class SyncService {
 
   /// Aktifkan lagi child items yang tadinya 'cancelled_dependency'
   Future<void> _restoreDependentItems(String parentRef) async {
-    final items = await _localDb.getAllQueueItems();
+    final items = await _localDb.syncDao.getAllQueueItems();
 
     for (final item in items) {
       if (item.status != 'cancelled_dependency') continue;
@@ -304,10 +301,10 @@ class SyncService {
   }
 
   void _init() {
-    _localDb.resetStuckSyncing().then((_) {
+    _localDb.syncDao.resetStuckSyncing().then((_) {
       log('[SyncService] Stuck syncing items reset to pending.');
     });
-    _localDb.clearStaleSyncLock(ttlMinutes: 5).then((_) {
+    _localDb.syncDao.clearStaleSyncLock(ttlMinutes: 5).then((_) {
       log('[SyncService] Stale sync locks cleared.');
     });
 
@@ -332,7 +329,7 @@ class SyncService {
   }
 
   Future<void> _syncAllInternal() async {
-    final got = await _localDb.acquireSyncLock('syncAll', ttlMinutes: 5);
+    final got = await _localDb.syncDao.acquireSyncLock('syncAll', ttlMinutes: 5);
     if (!got) {
       log('[SyncService] Sync sudah berjalan, skip.');
       return;
@@ -354,7 +351,7 @@ class SyncService {
       while (true) {
         // Ambil antrean terbaru setiap iterasi untuk menghindari data "basi" (stale)
         // terutama setelah item sebelumnya di-patch IDs-nya.
-        final queue = await _localDb.getAllQueueItems();
+        final queue = await _localDb.syncDao.getAllQueueItems();
 
         // DEBUG: Log semua queue item yang tersedia
         log('[SyncService] 📋 Queue snapshot: ${queue.length} items');
@@ -411,7 +408,7 @@ class SyncService {
           );
         }
 
-        await _localDb.updateQueueStatus(localRef, 'syncing');
+        await _localDb.syncDao.updateQueueStatus(localRef, 'syncing');
 
         try {
           // Convert SyncQueueTableData to Map for _processItem
@@ -420,7 +417,7 @@ class SyncService {
           // Mark as synced by server BEFORE removing from queue
           // This prevents duplicate sync if app is killed/restarted
           await _localDb.markServerSynced(localRef);
-          await _localDb.removeFromQueue(localRef);
+          await _localDb.syncDao.removeFromQueue(localRef);
           _deferCount.remove(localRef);
           log('[SyncService] ✅ $localRef berhasil disinkronkan.');
 
@@ -430,7 +427,7 @@ class SyncService {
           _deferCount[localRef] = defers;
           if (defers >= _maxDefer) {
             log('[SyncService] ❌ $localRef deferred too many times, marking failed: $e');
-            await _localDb.updateQueueStatus(
+            await _localDb.syncDao.updateQueueStatus(
               localRef,
               'failed_permanently',
               errorMessage: 'Dependency never resolved after $_maxDefer cycles: $e',
@@ -438,7 +435,7 @@ class SyncService {
             _deferCount.remove(localRef);
           } else {
             log('[SyncService] ⏳ $localRef deferred ($defers/$_maxDefer): $e');
-            await _localDb.updateQueueStatus(
+            await _localDb.syncDao.updateQueueStatus(
               localRef,
               'pending',
               errorMessage: 'Menunggu dependency: $e',
@@ -447,17 +444,17 @@ class SyncService {
           continue;
         } on OfflineException catch (e) {
           log('[SyncService] ⚠️ Offline: $e. Menghentikan sync cycle.');
-          await _localDb.updateQueueStatus(localRef, 'pending');
+          await _localDb.syncDao.updateQueueStatus(localRef, 'pending');
           break; // No point continuing when offline
         } on SocketException catch (e) {
           log(
             '[SyncService] ⚠️ Koneksi bermasalah: $e. Lanjut ke item berikutnya.',
           );
-          await _localDb.updateQueueStatus(localRef, 'pending');
+          await _localDb.syncDao.updateQueueStatus(localRef, 'pending');
           continue; // Lanjut ke item berikutnya
         } on TimeoutException catch (e) {
           log('[SyncService] ⚠️ Timeout: $e. Lanjut ke item berikutnya.');
-          await _localDb.updateQueueStatus(localRef, 'pending');
+          await _localDb.syncDao.updateQueueStatus(localRef, 'pending');
           continue; // Lanjut ke item berikutnya
         } on SyncServerException catch (e) {
           // 401/Unauthorized — AuthInterceptor already handles token refresh
@@ -496,7 +493,7 @@ class SyncService {
               '[SyncService] ⚠️ Server/RateLimit Error (${e.statusCode}): '
               '${e.message}. Retry setelah ${backoff.inSeconds}s.',
             );
-            await _localDb.updateQueueStatus(
+            await _localDb.syncDao.updateQueueStatus(
               localRef,
               'pending',
               errorMessage:
@@ -510,7 +507,7 @@ class SyncService {
           // Resource gone on server (404/410) → cancel, jangan retry forever
           if (e.statusCode == 404 || e.statusCode == 410) {
             log('[SyncService] 🚫 $localRef resource hilang (${e.statusCode}): $e');
-            await _localDb.updateQueueStatus(
+            await _localDb.syncDao.updateQueueStatus(
               localRef,
               'cancelled_dependency',
               errorMessage: 'Resource tidak ditemukan di server (${e.statusCode})',
@@ -524,7 +521,7 @@ class SyncService {
           final isClientError = e.statusCode >= 400 && e.statusCode < 500;
           if (isClientError) {
             log('[SyncService] ❌ $localRef client error (${e.statusCode}), failed permanently: $e');
-            await _localDb.updateQueueStatus(
+            await _localDb.syncDao.updateQueueStatus(
               localRef,
               'failed_permanently',
               errorMessage: 'Validation error (${e.statusCode}): ${e.message}',
@@ -534,17 +531,17 @@ class SyncService {
           }
 
           // Unknown / non-HTTP errors → bounded retry
-          await _localDb.incrementRetry(localRef);
+          await _localDb.syncDao.incrementRetry(localRef);
           if (retryCount + 1 >= _maxRetry) {
             log('[SyncService] ❌ $localRef gagal permanen setelah $_maxRetry retry: $e');
-            await _localDb.updateQueueStatus(
+            await _localDb.syncDao.updateQueueStatus(
               localRef,
               'failed_permanently',
               errorMessage: e.toString(),
             );
           } else {
             log('[SyncService] ⚠️ $localRef error lain: $e');
-            await _localDb.updateQueueStatus(
+            await _localDb.syncDao.updateQueueStatus(
               localRef,
               'failed',
               errorMessage: e.toString(),
@@ -553,8 +550,8 @@ class SyncService {
           await _broadcastPendingCount();
         } catch (e) {
           log('[SyncService] ❌ $localRef error lokal: $e');
-          await _localDb.incrementRetry(localRef);
-          await _localDb.updateQueueStatus(
+          await _localDb.syncDao.incrementRetry(localRef);
+          await _localDb.syncDao.updateQueueStatus(
             localRef,
             'failed',
             errorMessage: e.toString(),
@@ -563,10 +560,10 @@ class SyncService {
         }
       }
     } finally {
-      await _localDb.releaseSyncLock('syncAll');
+      await _localDb.syncDao.releaseSyncLock('syncAll');
     }
 
-    final remaining = await _localDb.getPendingCount();
+    final remaining = await _localDb.syncDao.getPendingCount();
     _emitPendingCount(remaining);
 
     // ── Schedule next sync with exponential backoff when idle ─────────────
@@ -588,7 +585,7 @@ class SyncService {
       log(
         '[SyncService] ⏭️ Item ${item['local_ref']} sudah synced sebelumnya, skip.',
       );
-      await _localDb.removeFromQueue(item['local_ref'] as String);
+      await _localDb.syncDao.removeFromQueue(item['local_ref'] as String);
       return null;
     }
 
@@ -817,7 +814,7 @@ class SyncService {
     Map<String, dynamic> payload = const {},
     bool triggerSync = false,
   }) async {
-    final ref = await _localDb.enqueue(
+    final ref = await _localDb.syncDao.enqueue(
       operation: operation,
       endpoint: endpoint,
       method: method,
@@ -845,6 +842,16 @@ class SyncService {
     required Map<String, dynamic> payload,
   }) => enqueue(
     operation: 'check_out',
+    endpoint: endpoint,
+    payload: payload,
+    triggerSync: true,
+  );
+
+  Future<String> enqueueUpdateScheduleStatus({
+    required String endpoint,
+    required Map<String, dynamic> payload,
+  }) => enqueue(
+    operation: 'update_schedule_status',
     endpoint: endpoint,
     payload: payload,
     triggerSync: true,
@@ -918,7 +925,7 @@ class SyncService {
     required String endpoint,
     required Map<String, dynamic> payload,
   }) async {
-    final localRef = await _localDb.enqueue(
+    final localRef = await _localDb.syncDao.enqueue(
       operation: 'create_pelanggan',
       endpoint: endpoint,
       method: 'POST',
@@ -934,10 +941,10 @@ class SyncService {
     const pollIntervalMs = 100;
     int waitedMs = 0;
 
-    final got = await _localDb.acquireSyncLock('syncAll', ttlMinutes: 5);
+    final got = await _localDb.syncDao.acquireSyncLock('syncAll', ttlMinutes: 5);
     if (got) {
       try {
-        final items = await _localDb.getAllQueueItems();
+        final items = await _localDb.syncDao.getAllQueueItems();
         final item = items.where((i) => i.localRef == localRef).firstOrNull;
         if (item == null) {
           return await _reconstructCustomerResponse(localRef, payload);
@@ -949,7 +956,7 @@ class SyncService {
           );
         }
 
-        await _localDb.updateQueueStatus(localRef, 'syncing');
+        await _localDb.syncDao.updateQueueStatus(localRef, 'syncing');
         try {
           final itemMap = _syncQueueItemToMap(item);
           final response = await _processItem(itemMap);
@@ -958,11 +965,11 @@ class SyncService {
               ? (response['id'] ?? response['data']?['id'])
               : null;
           if (serverId != null) {
-            await _localDb.saveRefMapping(localRef, serverId.toString());
+            await _localDb.syncDao.saveRefMapping(localRef, serverId.toString());
             final itemPayload = jsonDecode(item.payload) as Map<String, dynamic>;
             final clientRef = itemPayload['client_ref'] as String?;
             if (clientRef != null) {
-              await _localDb.saveRefMapping(clientRef, serverId.toString());
+              await _localDb.syncDao.saveRefMapping(clientRef, serverId.toString());
             }
             await _patchDependentItems(
               localRef,
@@ -972,7 +979,7 @@ class SyncService {
           }
 
           await _localDb.markServerSynced(localRef);
-          await _localDb.removeFromQueue(localRef);
+          await _localDb.syncDao.removeFromQueue(localRef);
           _deferCount.remove(localRef);
           await _broadcastPendingCount();
           log(
@@ -983,7 +990,7 @@ class SyncService {
           log(
             '[SyncService] syncCreateCustomerNow: sync failed: $e, re-queuing',
           );
-          await _localDb.updateQueueStatus(
+          await _localDb.syncDao.updateQueueStatus(
             localRef,
             'failed',
             errorMessage: e.toString(),
@@ -992,13 +999,13 @@ class SyncService {
           rethrow;
         }
       } finally {
-        await _localDb.releaseSyncLock('syncAll');
+        await _localDb.syncDao.releaseSyncLock('syncAll');
       }
     }
 
     // Lock held by another sync loop — observe-only mode.
     while (waitedMs < maxWaitMs) {
-      final items = await _localDb.getAllQueueItems();
+      final items = await _localDb.syncDao.getAllQueueItems();
       final item = items.where((i) => i.localRef == localRef).firstOrNull;
 
       if (item == null) {
@@ -1032,7 +1039,7 @@ class SyncService {
     String localRef,
     Map<String, dynamic> payload,
   ) async {
-    final serverId = await _localDb.getServerId(localRef);
+    final serverId = await _localDb.syncDao.getServerId(localRef);
     final driftId = payload['_drift_record_id']?.toString() ?? localRef;
     final customer = await _localDb.getCustomer(driftId);
     return {
@@ -1070,10 +1077,10 @@ class SyncService {
         op == 'create_pelanggan' ||
         op == 'create_prospect') {
       try {
-        await _localDb.saveRefMapping(localRef, serverId.toString());
+        await _localDb.syncDao.saveRefMapping(localRef, serverId.toString());
         final clientRef = payload['client_ref'];
         if (clientRef != null) {
-          await _localDb.saveRefMapping(
+          await _localDb.syncDao.saveRefMapping(
             clientRef.toString(),
             serverId.toString(),
           );
@@ -1168,7 +1175,7 @@ class SyncService {
                     : double.tryParse(serverTotalTagihan.toString()) ??
                           existingOrder.totalTagihan)
               : existingOrder.totalTagihan;
-          final String? resolvedServerId = serverId.toString();
+          final String resolvedServerId = serverId.toString();
 
           await _localDb.saveOrder(
             id: existingOrder.id,
@@ -1197,7 +1204,7 @@ class SyncService {
 
         final clientRef = payload['client_ref'];
         if (clientRef != null) {
-          await _localDb.saveRefMapping(
+          await _localDb.syncDao.saveRefMapping(
             clientRef.toString(),
             serverId.toString(),
           );
@@ -1215,7 +1222,7 @@ class SyncService {
     dynamic serverId, {
     String? clientRef,
   }) async {
-    final items = await _localDb.getAllQueueItems();
+    final items = await _localDb.syncDao.getAllQueueItems();
 
     // serverId is now a UUID string
     final resolvedServerId = serverId.toString();
@@ -1270,7 +1277,7 @@ class SyncService {
   // ── Utilities ─────────────────────────────────────────────────────────────
 
   Future<void> _broadcastPendingCount() async {
-    final count = await _localDb.getPendingCount();
+    final count = await _localDb.syncDao.getPendingCount();
     _emitPendingCount(count);
   }
 

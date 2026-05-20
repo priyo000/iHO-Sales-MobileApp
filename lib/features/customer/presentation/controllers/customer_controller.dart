@@ -50,7 +50,7 @@ final customerRevalidatingProvider =
 // These return Stream<List<CustomersTableData>> for use with StreamBuilder
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Watch all customers as Stream<List<CustomersTableData>>
+/// Watch all customers as `Stream<List<CustomersTableData>>`
 final allCustomersStreamProvider = Provider<Stream<List<CustomersTableData>>>((
   ref,
 ) {
@@ -82,10 +82,11 @@ final customersByStatusStreamProvider =
     });
 
 /// Watch customers with search query - instant SQL filtering
+/// Only shows ACTIVE + PENDING customers (same as default list filter)
 final customerSearchStreamProvider =
     Provider.family<Stream<List<CustomersTableData>>, String>((ref, query) {
-      final repo = ref.watch(customerRepositoryProvider);
-      return repo.watchSearchCustomers(query);
+      final db = ref.watch(appDatabaseProvider);
+      return db.watchSearchCustomersWithStatus(query, ['active', 'pending']);
     });
 
 // ─── Controller ───────────────────────────────────────────────────────────────

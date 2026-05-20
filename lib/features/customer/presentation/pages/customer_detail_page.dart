@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/utils/formatters.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,7 +23,7 @@ import '../widgets/customer_financial_section.dart';
 import '../widgets/customer_location_card.dart';
 import '../widgets/customer_bottom_bar.dart';
 
-/// Convert CustomersTableData to Map<String, dynamic> for UI compatibility
+/// Convert CustomersTableData to `Map<String, dynamic>` for UI compatibility
 Map<String, dynamic> _customerDataToMap(CustomersTableData? data) {
   if (data == null) return {};
   return {
@@ -195,62 +196,15 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     return Colors.grey;
   }
 
-  // Payment System & Method Helpers
-  String _getPaymentSystemDisplay(String? sistem) {
-    if (sistem == null || sistem.isEmpty) return '-';
-    switch (sistem) {
-      case 'Cash':
-        return 'Cash';
-      case 'Kredit':
-        return 'Kredit';
-      default:
-        return sistem;
-    }
-  }
+  String _formatCurrency(dynamic value) => Formatters.number(value);
 
-  String _getPaymentMethodSubtext(String? method) {
-    if (method == null || method.isEmpty) return 'Belum diatur';
-    switch (method) {
-      case 'Tunai':
-        return 'Bayar Tunai';
-      case 'Transfer':
-        return 'Transfer Bank';
-      case 'Giro':
-        return 'Bayar Giro';
-      default:
-        return method;
+  String _displayKodePelanggan(dynamic kode) {
+    if (kode == null || kode.toString().isEmpty) return 'MENUNGGU SINKRONISASI';
+    final str = kode.toString();
+    if (str.startsWith('create_pelanggan_') || str.startsWith('local_')) {
+      return 'MENUNGGU SINKRONISASI';
     }
-  }
-
-  IconData _getPaymentMethodIcon(String? method) {
-    if (method == null || method.isEmpty) return Icons.help_outline;
-    switch (method) {
-      case 'Tunai':
-        return Icons.money;
-      case 'Transfer':
-        return Icons.account_balance;
-      case 'Giro':
-        return Icons.receipt_long;
-      default:
-        return Icons.payment;
-    }
-  }
-
-  String _formatCurrency(dynamic value) {
-    if (value == null) return '0';
-    final numValue = value is num ? value : num.tryParse(value.toString()) ?? 0;
-    // Simple formatting: add thousand separator
-    final formatter = numValue.toStringAsFixed(0);
-    final parts = <String>[];
-    var remaining = formatter;
-    while (remaining.length > 3) {
-      parts.insert(0, remaining.substring(remaining.length - 3));
-      remaining = remaining.substring(0, remaining.length - 3);
-    }
-    if (remaining.isNotEmpty) {
-      parts.insert(0, remaining);
-    }
-    return parts.join('.');
+    return str;
   }
 
   @override
@@ -1229,7 +1183,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  currentPelanggan['kode_pelanggan'] ?? '-',
+                                  _displayKodePelanggan(currentPelanggan['kode_pelanggan']),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,

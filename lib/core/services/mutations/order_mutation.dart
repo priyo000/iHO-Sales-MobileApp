@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../db/app_database.dart';
 import '../../constants/api_constants.dart';
+import '../../constants/order_status.dart';
 import '../sync_service.dart';
 
 class OrderMutation {
@@ -61,7 +62,7 @@ class OrderMutation {
         id: localRef,
         kunjunganId: kunjunganId?.toString(),
         pelangganId: validPelangganId,
-        status: 'PENDING',
+        status: OrderStatus.pending.code,
         itemsJson: itemsJson,
         notes: notes,
         promosJson: promosJson,
@@ -72,10 +73,10 @@ class OrderMutation {
       await _sync.enqueueCreateOrder(
         endpoint: _endpointPesanan,
         payload: {
-          if (kunjunganId != null) 'id_kunjungan': kunjunganId,
-          if (pelangganId != null) 'id_pelanggan': pelangganId,
+          'id_kunjungan': ?kunjunganId,
+          'id_pelanggan': ?pelangganId,
           'client_ref': stableClientRef,
-          if (pelangganData != null) 'pelanggan': pelangganData,
+          'pelanggan': ?pelangganData,
           if (notes?.isNotEmpty == true) 'catatan': notes,
           'items': orderItems,
           if (promosApplied?.isNotEmpty == true) 'promos_applied': promosApplied,
@@ -91,7 +92,7 @@ class OrderMutation {
         'local_ref': localRef,
         'client_ref': stableClientRef,
         'no_pesanan': null,
-        'status': 'PENDING',
+        'status': OrderStatus.pending.code,
         'is_offline': true,
         'total_tagihan': totalTagihan,
         'nama_promo': promosApplied?.isNotEmpty == true
@@ -208,7 +209,7 @@ class OrderMutation {
       endpoint: endpoint,
       method: 'PUT',
       payload: {
-        if (notes != null) 'catatan': notes,
+        'catatan': ?notes,
         'items': items,
         if (promosApplied?.isNotEmpty == true) 'promos_applied': promosApplied,
         if (hadiahDitebus?.isNotEmpty == true) 'hadiah_ditebus': hadiahDitebus,

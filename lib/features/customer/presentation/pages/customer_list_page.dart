@@ -5,13 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/store_image.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../core/widgets/app_error_view.dart';
 import '../../../../core/db/app_database.dart';
 import '../controllers/customer_controller.dart';
 
-/// Convert CustomersTableData to Map<String, dynamic> for UI
+/// Convert CustomersTableData to `Map<String, dynamic>` for UI
 Map<String, dynamic> _customerToMap(CustomersTableData row) {
   return {
     'id': row.serverId ?? row.id,
@@ -561,26 +562,6 @@ class _CustomerCard extends StatelessWidget {
         : '${d.toStringAsFixed(0)} m';
   }
 
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      const months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'Mei',
-        'Jun',
-        'Jul',
-        'Agu',
-        'Sep',
-        'Okt',
-        'Nov',
-        'Des',
-      ];
-      return '${date.day} ${months[date.month - 1]} ${date.year}';
-    } catch (_) {
-      return dateStr;
-    }
-  }
+  String _formatDate(String dateStr) =>
+      Formatters.dateFromString(dateStr, pattern: 'd MMM yyyy');
 }

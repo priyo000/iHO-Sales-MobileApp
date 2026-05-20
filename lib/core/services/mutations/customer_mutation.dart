@@ -147,16 +147,16 @@ class CustomerMutation {
     String? provinsiUsaha,
   }) async {
     final fields = <String, dynamic>{
-      if (namaToko != null) 'nama_toko': namaToko,
-      if (namaPemilik != null) 'nama_pemilik': namaPemilik,
-      if (noHpPribadi != null) 'no_hp_pribadi': noHpPribadi,
-      if (alamatUsaha != null) 'alamat_usaha': alamatUsaha,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
-      if (status != null) 'status': status,
-      if (kotaUsaha != null) 'kota_usaha': kotaUsaha,
-      if (kecamatanUsaha != null) 'kecamatan_usaha': kecamatanUsaha,
-      if (provinsiUsaha != null) 'provinsi_usaha': provinsiUsaha,
+      'nama_toko': ?namaToko,
+      'nama_pemilik': ?namaPemilik,
+      'no_hp_pribadi': ?noHpPribadi,
+      'alamat_usaha': ?alamatUsaha,
+      'latitude': ?latitude,
+      'longitude': ?longitude,
+      'status': ?status,
+      'kota_usaha': ?kotaUsaha,
+      'kecamatan_usaha': ?kecamatanUsaha,
+      'provinsi_usaha': ?provinsiUsaha,
     };
 
     final existing = await _db.getCustomer(id);
@@ -292,6 +292,7 @@ class CustomerMutation {
 
     await _db.saveCustomer(
       id: localRef,
+      clientRef: localRef,
       namaToko: namaToko,
       namaPemilik: namaPemilik,
       noHpPribadi: noHpPribadi,

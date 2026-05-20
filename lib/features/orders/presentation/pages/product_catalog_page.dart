@@ -114,11 +114,11 @@ class _ProductCatalogPageState extends ConsumerState<ProductCatalogPage> {
 
     // SSOT: Use StreamBuilder with SQL-based category + search
     // Category and search are combined at DB level for 10k+ products
-    late final Stream<List<Product>> productsStream;
+    late final AsyncValue<List<Product>> productsAsync;
     if (_selectedCategoryId != null) {
       if (_searchQuery.isNotEmpty) {
         // Both category + search → combined DB query
-        productsStream = ref.watch(
+        productsAsync = ref.watch(
           productsByCategoryAndSearchStreamProvider((
             kategoriId: _selectedCategoryId!,
             query: _searchQuery,
@@ -126,13 +126,13 @@ class _ProductCatalogPageState extends ConsumerState<ProductCatalogPage> {
         );
       } else {
         // Category only → DB query by category
-        productsStream = ref.watch(
+        productsAsync = ref.watch(
           productsByCategoryStreamProvider(_selectedCategoryId!),
         );
       }
     } else {
       // No category → search or all products
-      productsStream = _searchQuery.isEmpty
+      productsAsync = _searchQuery.isEmpty
           ? ref.watch(productsStreamProvider)
           : ref.watch(productSearchStreamProvider(_searchQuery));
     }
@@ -302,7 +302,7 @@ class _ProductCatalogPageState extends ConsumerState<ProductCatalogPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
-                        error: (_, __) => const SizedBox(height: 40),
+                        error: (_, _) => const SizedBox(height: 40),
                       );
                     },
                   ),
@@ -310,25 +310,13 @@ class _ProductCatalogPageState extends ConsumerState<ProductCatalogPage> {
               ),
             ),
 
-            // Product Grid - SSOT with StreamBuilder
+            // Product Grid - SSOT with reactive StreamProvider
             Expanded(
-              child: StreamBuilder<List<Product>>(
-                stream: productsStream,
-                builder: (context, snapshot) {
-                  // SSOT: Data is instant from Drift - show skeleton only on first load
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-
-                  final products = snapshot.data ?? [];
-
-                  // No in-memory filter needed — category already filtered via DB query
-
+              child: productsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) =>
+                    Center(child: Text('Error: $error')),
+                data: (products) {
                   if (products.isEmpty) {
                     return Center(child: Text('Produk tidak ditemukan'));
                   }
@@ -337,7 +325,6 @@ class _ProductCatalogPageState extends ConsumerState<ProductCatalogPage> {
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: products.length,
-                    cacheExtent: 200,
                     itemBuilder: (context, index) {
                       final product = products[index];
                       final formatter = NumberFormat.currency(

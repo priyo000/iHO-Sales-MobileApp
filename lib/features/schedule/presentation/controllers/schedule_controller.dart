@@ -36,7 +36,7 @@ final scheduleSearchProvider = NotifierProvider<ScheduleSearchNotifier, String>(
 // These return combined schedule+pelanggan data as List<Map<String, dynamic>>
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Watch schedule for a specific date as Stream<List<Map<String, dynamic>>>
+/// Watch schedule for a specific date as `Stream<List<Map<String, dynamic>>>`
 /// Joins ScheduleTable with customer data from CustomersTable.
 /// Also merges unplanned visits (kunjungan diluar jadwal) from VisitsTable
 /// where scheduleId == null, so they appear on the schedule list with a timer.
@@ -115,7 +115,7 @@ final scheduleStreamProvider =
             result.add(_scheduleToMap(
               item,
               customer,
-              kunjunganId: matchingVisit?.serverId ?? (matchingVisit != null ? matchingVisit.id : null),
+              kunjunganId: matchingVisit?.serverId ?? (matchingVisit?.id),
               pesananCount: pesananCount,
             ));
           }
@@ -329,7 +329,7 @@ class ScheduleController extends AsyncNotifier<List<dynamic>> {
       result.add(_scheduleToMap(
         item,
         customer,
-        kunjunganId: matchingVisit?.serverId ?? (matchingVisit != null ? matchingVisit.id : null),
+        kunjunganId: matchingVisit?.serverId ?? (matchingVisit?.id),
         pesananCount: pesananCount,
       ));
     }

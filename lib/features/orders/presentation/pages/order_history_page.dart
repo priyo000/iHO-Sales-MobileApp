@@ -203,7 +203,6 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
                       itemCount: filtered.length,
-                      cacheExtent: 200,
                       itemBuilder: (context, index) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),

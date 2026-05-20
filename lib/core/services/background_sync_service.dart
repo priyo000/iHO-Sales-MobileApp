@@ -75,7 +75,7 @@ Future<void> _savePreWorkSyncTime({required String status, String? error}) async
   final data = {
     'last_sync': DateTime.now().toIso8601String(),
     'status': status,
-    if (error != null) 'error': error,
+    'error': ?error,
   };
   await prefs.setString('pre_work_sync_time', jsonEncode(data));
 }
