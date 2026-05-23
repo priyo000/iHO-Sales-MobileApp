@@ -148,8 +148,8 @@ class _JadwalTabState extends ConsumerState<_JadwalTab> {
     final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
     final currentPosition = ref.watch(userLocationProvider).asData?.value;
 
-    // SSOT: Watch stream for instant local data (Riverpod-managed StreamProvider)
-    final scheduleAsync = ref.watch(scheduleStreamProvider(dateStr));
+    // SSOT: Watch filtered stream (applies search from scheduleSearchProvider)
+    final scheduleAsync = ref.watch(filteredScheduleProvider(dateStr));
 
     return Column(
       children: [

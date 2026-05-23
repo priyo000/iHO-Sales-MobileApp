@@ -191,6 +191,32 @@ final scheduleStreamProvider =
       return controller.stream;
     });
 
+/// Filtered schedule: combines scheduleStreamProvider with scheduleSearchProvider.
+/// Watches both reactively so the UI updates when either changes.
+final filteredScheduleProvider =
+    Provider.family<AsyncValue<List<Map<String, dynamic>>>, String>((
+  ref,
+  tanggal,
+) {
+  final scheduleAsync = ref.watch(scheduleStreamProvider(tanggal));
+  final search = ref.watch(scheduleSearchProvider);
+
+  if (search.isEmpty) return scheduleAsync;
+
+  return scheduleAsync.whenData((items) {
+    final query = search.toLowerCase();
+    return items.where((item) {
+      final p = item['pelanggan'] as Map<String, dynamic>? ?? {};
+      final namaToko = (p['nama_toko']?.toString() ?? '').toLowerCase();
+      final namaPel = (p['nama_pelanggan']?.toString() ?? '').toLowerCase();
+      final alamat = (p['alamat']?.toString() ?? '').toLowerCase();
+      return namaToko.contains(query) ||
+          namaPel.contains(query) ||
+          alamat.contains(query);
+    }).toList();
+  });
+});
+
 /// Convert ScheduleTableData to Map with full pelanggan data from CustomersTable
 Map<String, dynamic> _scheduleToMap(
   ScheduleTableData row,
