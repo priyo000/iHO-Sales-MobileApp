@@ -1111,6 +1111,7 @@ class SyncService {
           await _localDb.saveCustomer(
             id: driftRecordId,
             serverId: resolvedServerId,
+            clientRef: payload['client_ref']?.toString(),
             kodePelanggan: serverData['kode_pelanggan'] as String?,
             namaToko:
                 serverData['nama_toko'] as String? ??

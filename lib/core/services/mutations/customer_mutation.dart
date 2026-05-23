@@ -293,6 +293,7 @@ class CustomerMutation {
 
     await _db.saveCustomer(
       id: localRef,
+      clientRef: localRef,
       namaToko: namaToko,
       namaPemilik: namaPemilik,
       noHpPribadi: noHpPribadi,
