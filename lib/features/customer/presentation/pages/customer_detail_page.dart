@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import '../../../../core/auth/user_provider.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../core/services/image_picker_service.dart';
@@ -14,6 +12,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../schedule/presentation/controllers/schedule_controller.dart';
+import '../../../visit/data/visit_repository.dart';
 import '../../../visit/presentation/controllers/visit_controller.dart';
 import '../../data/customer_repository.dart';
 import '../controllers/customer_controller.dart';
@@ -24,6 +23,7 @@ import '../widgets/customer_detail_header.dart';
 import '../widgets/customer_detail_info_sheet.dart';
 import '../widgets/customer_detail_stats_row.dart';
 import '../widgets/customer_financial_section.dart';
+import '../widgets/customer_last_visit_sheet.dart';
 import '../widgets/customer_location_card.dart';
 
 /// Convert CustomersTableData to `Map<String, dynamic>` for UI compatibility.
@@ -382,13 +382,6 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     }
   }
 
-  void _onCallTap(Map<String, dynamic> pelanggan) {
-    final phone = pelanggan['no_hp_pribadi'] ??
-        pelanggan['no_hp_kontak'] ??
-        pelanggan['telepon'];
-    if (phone != null) launchUrl(Uri.parse('tel:$phone'));
-  }
-
   void _onCartTap() {
     final id = _pelangganMap?['id'];
     if (id == null) {
@@ -516,16 +509,24 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           ],
         ),
       ),
-      bottomBar: CustomerBottomBar(
-        isCheckedIn: _isCheckedIn,
-        isCompleted: _isCompleted,
-        isLoading: _isLoading,
-        timerStream: _timerStream,
-        currentDuration: _getFormattedDuration(),
-        onCallTap: () => _onCallTap(data.current),
-        onCartTap: _onCartTap,
-        onCheckInTap: _toggleCheckIn,
-      ),
+      bottomBar: Builder(builder: (context) {
+        final lastVisit = ref
+            .watch(lastCompletedVisitProvider(customerId))
+            .asData
+            ?.value;
+        return CustomerBottomBar(
+          isCheckedIn: _isCheckedIn,
+          isCompleted: _isCompleted,
+          isLoading: _isLoading,
+          timerStream: _timerStream,
+          currentDuration: _getFormattedDuration(),
+          onCartTap: _onCartTap,
+          onCheckInTap: _toggleCheckIn,
+          onLastVisitTap: lastVisit != null
+              ? () => CustomerLastVisitSheet.show(context, lastVisit)
+              : null,
+        );
+      }),
     );
   }
 }

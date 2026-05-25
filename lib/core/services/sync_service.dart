@@ -649,12 +649,15 @@ class SyncService {
     final hasPhotos = photoPaths.isNotEmpty;
 
     if (hasPhotos) {
-      // Multipart request untuk data + foto
+      final visitIdForRetention = operation == 'check_out'
+          ? payload['id_kunjungan']?.toString()
+          : null;
       return await _processMultipart(
         endpoint: endpoint,
         method: method,
         fields: payload.map((k, v) => MapEntry(k, v.toString())),
         photoPaths: photoPaths,
+        retainForVisitId: visitIdForRetention,
       );
     } else {
       // JSON request biasa (tanpa foto)
@@ -761,6 +764,7 @@ class SyncService {
     required String method,
     required Map<String, String> fields,
     required Map<String, String> photoPaths,
+    String? retainForVisitId,
   }) async {
     final dio = _ref.read(dioClientProvider);
     final formData = FormData();
@@ -797,7 +801,16 @@ class SyncService {
         method: method,
       );
 
-      await _photoStorage.deletePhotos(photoPaths.values.toList());
+      if (retainForVisitId != null && retainForVisitId.isNotEmpty) {
+        try {
+          await _localDb.visitDao.savePhotoPaths(retainForVisitId, photoPaths);
+        } catch (e) {
+          log('[SyncService] ⚠️ Gagal simpan localPhotoPaths untuk $retainForVisitId: $e');
+          await _photoStorage.deletePhotos(photoPaths.values.toList());
+        }
+      } else {
+        await _photoStorage.deletePhotos(photoPaths.values.toList());
+      }
       return response;
     } on ServerException catch (e) {
       final msg = e.data is Map

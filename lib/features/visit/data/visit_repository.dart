@@ -12,6 +12,13 @@ final visitRepositoryProvider = Provider<VisitRepository>((ref) {
   );
 });
 
+final lastCompletedVisitProvider =
+    StreamProvider.family<VisitsTableData?, String>((ref, pelangganId) {
+  return ref
+      .watch(visitRepositoryProvider)
+      .watchLastCompletedVisitByPelanggan(pelangganId);
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // VisitRepository — SSOT Pattern
 //
@@ -52,6 +59,11 @@ class VisitRepository {
   /// Watch visits by pelanggan
   Stream<List<VisitsTableData>> watchVisitsByPelanggan(String pelangganId) {
     return _db.watchVisitsByPelanggan(pelangganId);
+  }
+
+  /// Watch last completed visit (with check-out time) by pelanggan
+  Stream<VisitsTableData?> watchLastCompletedVisitByPelanggan(String pelangganId) {
+    return _db.watchLastCompletedVisitByPelanggan(pelangganId);
   }
 
   /// Watch single visit by ID

@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:sales_tracker_mobile/core/auth/auth_controller.dart';
 import 'package:sales_tracker_mobile/core/auth/user_provider.dart';
+import 'package:sales_tracker_mobile/core/providers/database_providers.dart';
 import 'package:sales_tracker_mobile/core/services/app_update_service.dart';
+import 'package:sales_tracker_mobile/core/services/offline_photo_service.dart';
 import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
 import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
@@ -134,6 +136,17 @@ class UserProfilePage extends ConsumerWidget {
                 subtitle: 'Update keamanan akun Anda',
                 icon: Icons.lock_outline_rounded,
                 onTap: () => context.push('/change-password'),
+                showChevron: true,
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.xl),
+            _buildSection('Penyimpanan', [
+              _buildSettingItem(
+                title: 'Bersihkan Cache Foto',
+                subtitle:
+                    'Hapus foto bukti kunjungan yang sudah tersinkron dari perangkat',
+                icon: Icons.photo_library_outlined,
+                onTap: () => _confirmClearPhotoCache(context, ref),
                 showChevron: true,
               ),
             ]),
@@ -401,6 +414,62 @@ class UserProfilePage extends ConsumerWidget {
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.xs,
+      ),
+    );
+  }
+
+  void _confirmClearPhotoCache(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Bersihkan Cache Foto?'),
+        content: const Text(
+          'Semua foto bukti kunjungan yang sudah tersinkron ke server akan dihapus dari perangkat. Foto tetap tersimpan di server.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Membersihkan cache foto...')),
+              );
+              try {
+                final db = ref.read(appDatabaseProvider);
+                final service = ref.read(offlinePhotoServiceProvider);
+                final deleted = await service.cleanupOldVisitPhotos(
+                  db,
+                  maxAgeDays: 0,
+                );
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      deleted > 0
+                          ? '$deleted foto dihapus, ruang disk dibebaskan.'
+                          : 'Tidak ada foto cache untuk dihapus.',
+                    ),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Gagal bersihkan cache: $e'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+            ),
+            child: Text('Bersihkan', style: AppTextStyles.button),
+          ),
+        ],
       ),
     );
   }

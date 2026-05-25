@@ -210,6 +210,13 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
         .watch();
   }
 
+  Stream<List<OrdersTableData>> watchOrdersByKunjungan(String kunjunganId) {
+    return (select(ordersTable)
+          ..where((t) => t.kunjunganId.equals(kunjunganId))
+          ..orderBy([(t) => OrderingTerm.desc(t.tanggalTransaksi)]))
+        .watch();
+  }
+
   Stream<List<OrdersTableData>> watchOrdersByStatus(String status) {
     return (select(ordersTable)
           ..where((t) => t.status.equals(status))

@@ -121,14 +121,6 @@ class DashboardRepository {
             createdAt >= todayStart &&
             createdAt < todayEnd;
       }).length;
-      final offlineLuarRuteCount = pendingCheckIns.where((e) {
-        final payload = e['payload'] as Map<String, dynamic>;
-        final createdAt = e['created_at'];
-        return payload['id_jadwal'] == null &&
-            createdAt is int &&
-            createdAt >= todayStart &&
-            createdAt < todayEnd;
-      }).length;
 
       // Pending orders count (for sync badge, not for dashboard total)
       final pendingOrders = await _db.getPendingOrders();
@@ -144,21 +136,16 @@ class DashboardRepository {
       // Calculate total sales today
       final totalSalesToday = await _db.getOrdersTotalInRange(today, today);
 
-      // Get schedule data for target_kunjungan from preloaded schedule
       final todaySchedule = await _db.getScheduleForDate(today);
-      final scheduledVisits = todaySchedule.length;
-
-      // Target kunjungan = scheduled visits (from route) + offline luar rute
-      final targetKunjungan = scheduledVisits > 0
-          ? scheduledVisits
-          : (totalVisitsToday + offlineLuarRuteCount);
+      final plannedSchedule = todaySchedule
+          .where((s) => s.jadwalId != null)
+          .toList();
+      final scheduledVisits = plannedSchedule.length;
 
       return {
         'kunjungan_selesai': checkedOutVisits + offlineCheckoutsCount,
         'kunjungan_rute_selesai': plannedCheckedOut,
-        'target_kunjungan': targetKunjungan > 0
-            ? targetKunjungan
-            : checkedOutVisits + offlineCheckoutsCount,
+        'target_kunjungan': scheduledVisits,
         'luar_rute': unplannedVisits.length,
         'total_order_hari_ini': totalOrderHariIni,
         'pelanggan_baru_hari_ini': newCustomersCount,
@@ -175,10 +162,10 @@ class DashboardRepository {
             pendingCreateCustomers.length +
             pendingUpdateCustomers.length +
             pendingUpdateCustomerPhotos.length,
-        'rute_hari_ini': todaySchedule.isNotEmpty
+        'rute_hari_ini': plannedSchedule.isNotEmpty
             ? {
-                'id': todaySchedule.first.id,
-                'name': await _getRouteName(todaySchedule.first.id) ?? 'Rute Hari Ini',
+                'id': plannedSchedule.first.id,
+                'name': await _getRouteName(plannedSchedule.first.id) ?? 'Rute Hari Ini',
                 'keterangan': '$scheduledVisits titik kunjungan',
                 'total_titik': scheduledVisits,
                 'dikunjungi': plannedCheckedOut,

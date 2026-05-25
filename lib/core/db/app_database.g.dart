@@ -2871,6 +2871,17 @@ class $VisitsTableTable extends VisitsTable
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _localPhotoPathsMeta = const VerificationMeta(
+    'localPhotoPaths',
+  );
+  @override
+  late final GeneratedColumn<String> localPhotoPaths = GeneratedColumn<String>(
+    'local_photo_paths',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2910,6 +2921,7 @@ class $VisitsTableTable extends VisitsTable
     catatan,
     serverId,
     photosPending,
+    localPhotoPaths,
     createdAt,
     updatedAt,
   ];
@@ -3029,6 +3041,15 @@ class $VisitsTableTable extends VisitsTable
         ),
       );
     }
+    if (data.containsKey('local_photo_paths')) {
+      context.handle(
+        _localPhotoPathsMeta,
+        localPhotoPaths.isAcceptableOrUnknown(
+          data['local_photo_paths']!,
+          _localPhotoPathsMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3114,6 +3135,10 @@ class $VisitsTableTable extends VisitsTable
         DriftSqlType.int,
         data['${effectivePrefix}photos_pending'],
       )!,
+      localPhotoPaths: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_photo_paths'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -3147,6 +3172,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
   final String? catatan;
   final String? serverId;
   final int photosPending;
+  final String? localPhotoPaths;
   final int createdAt;
   final int updatedAt;
   const VisitsTableData({
@@ -3165,6 +3191,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
     this.catatan,
     this.serverId,
     required this.photosPending,
+    this.localPhotoPaths,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -3208,6 +3235,9 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
       map['server_id'] = Variable<String>(serverId);
     }
     map['photos_pending'] = Variable<int>(photosPending);
+    if (!nullToAbsent || localPhotoPaths != null) {
+      map['local_photo_paths'] = Variable<String>(localPhotoPaths);
+    }
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
@@ -3252,6 +3282,9 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
           ? const Value.absent()
           : Value(serverId),
       photosPending: Value(photosPending),
+      localPhotoPaths: localPhotoPaths == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localPhotoPaths),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -3278,6 +3311,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
       catatan: serializer.fromJson<String?>(json['catatan']),
       serverId: serializer.fromJson<String?>(json['serverId']),
       photosPending: serializer.fromJson<int>(json['photosPending']),
+      localPhotoPaths: serializer.fromJson<String?>(json['localPhotoPaths']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
@@ -3301,6 +3335,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
       'catatan': serializer.toJson<String?>(catatan),
       'serverId': serializer.toJson<String?>(serverId),
       'photosPending': serializer.toJson<int>(photosPending),
+      'localPhotoPaths': serializer.toJson<String?>(localPhotoPaths),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
@@ -3322,6 +3357,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
     Value<String?> catatan = const Value.absent(),
     Value<String?> serverId = const Value.absent(),
     int? photosPending,
+    Value<String?> localPhotoPaths = const Value.absent(),
     int? createdAt,
     int? updatedAt,
   }) => VisitsTableData(
@@ -3342,6 +3378,9 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
     catatan: catatan.present ? catatan.value : this.catatan,
     serverId: serverId.present ? serverId.value : this.serverId,
     photosPending: photosPending ?? this.photosPending,
+    localPhotoPaths: localPhotoPaths.present
+        ? localPhotoPaths.value
+        : this.localPhotoPaths,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -3374,6 +3413,9 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
       photosPending: data.photosPending.present
           ? data.photosPending.value
           : this.photosPending,
+      localPhotoPaths: data.localPhotoPaths.present
+          ? data.localPhotoPaths.value
+          : this.localPhotoPaths,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -3397,6 +3439,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
           ..write('catatan: $catatan, ')
           ..write('serverId: $serverId, ')
           ..write('photosPending: $photosPending, ')
+          ..write('localPhotoPaths: $localPhotoPaths, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3420,6 +3463,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
     catatan,
     serverId,
     photosPending,
+    localPhotoPaths,
     createdAt,
     updatedAt,
   );
@@ -3442,6 +3486,7 @@ class VisitsTableData extends DataClass implements Insertable<VisitsTableData> {
           other.catatan == this.catatan &&
           other.serverId == this.serverId &&
           other.photosPending == this.photosPending &&
+          other.localPhotoPaths == this.localPhotoPaths &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3462,6 +3507,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
   final Value<String?> catatan;
   final Value<String?> serverId;
   final Value<int> photosPending;
+  final Value<String?> localPhotoPaths;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> rowid;
@@ -3481,6 +3527,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
     this.catatan = const Value.absent(),
     this.serverId = const Value.absent(),
     this.photosPending = const Value.absent(),
+    this.localPhotoPaths = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3501,6 +3548,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
     this.catatan = const Value.absent(),
     this.serverId = const Value.absent(),
     this.photosPending = const Value.absent(),
+    this.localPhotoPaths = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.rowid = const Value.absent(),
@@ -3523,6 +3571,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
     Expression<String>? catatan,
     Expression<String>? serverId,
     Expression<int>? photosPending,
+    Expression<String>? localPhotoPaths,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? rowid,
@@ -3543,6 +3592,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
       if (catatan != null) 'catatan': catatan,
       if (serverId != null) 'server_id': serverId,
       if (photosPending != null) 'photos_pending': photosPending,
+      if (localPhotoPaths != null) 'local_photo_paths': localPhotoPaths,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3565,6 +3615,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
     Value<String?>? catatan,
     Value<String?>? serverId,
     Value<int>? photosPending,
+    Value<String?>? localPhotoPaths,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int>? rowid,
@@ -3585,6 +3636,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
       catatan: catatan ?? this.catatan,
       serverId: serverId ?? this.serverId,
       photosPending: photosPending ?? this.photosPending,
+      localPhotoPaths: localPhotoPaths ?? this.localPhotoPaths,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3639,6 +3691,9 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
     if (photosPending.present) {
       map['photos_pending'] = Variable<int>(photosPending.value);
     }
+    if (localPhotoPaths.present) {
+      map['local_photo_paths'] = Variable<String>(localPhotoPaths.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -3669,6 +3724,7 @@ class VisitsTableCompanion extends UpdateCompanion<VisitsTableData> {
           ..write('catatan: $catatan, ')
           ..write('serverId: $serverId, ')
           ..write('photosPending: $photosPending, ')
+          ..write('localPhotoPaths: $localPhotoPaths, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -11237,6 +11293,7 @@ typedef $$VisitsTableTableCreateCompanionBuilder =
       Value<String?> catatan,
       Value<String?> serverId,
       Value<int> photosPending,
+      Value<String?> localPhotoPaths,
       required int createdAt,
       required int updatedAt,
       Value<int> rowid,
@@ -11258,6 +11315,7 @@ typedef $$VisitsTableTableUpdateCompanionBuilder =
       Value<String?> catatan,
       Value<String?> serverId,
       Value<int> photosPending,
+      Value<String?> localPhotoPaths,
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int> rowid,
@@ -11344,6 +11402,11 @@ class $$VisitsTableTableFilterComposer
 
   ColumnFilters<int> get photosPending => $composableBuilder(
     column: $table.photosPending,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localPhotoPaths => $composableBuilder(
+    column: $table.localPhotoPaths,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11442,6 +11505,11 @@ class $$VisitsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localPhotoPaths => $composableBuilder(
+    column: $table.localPhotoPaths,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -11519,6 +11587,11 @@ class $$VisitsTableTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get localPhotoPaths => $composableBuilder(
+    column: $table.localPhotoPaths,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -11572,6 +11645,7 @@ class $$VisitsTableTableTableManager
                 Value<String?> catatan = const Value.absent(),
                 Value<String?> serverId = const Value.absent(),
                 Value<int> photosPending = const Value.absent(),
+                Value<String?> localPhotoPaths = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -11591,6 +11665,7 @@ class $$VisitsTableTableTableManager
                 catatan: catatan,
                 serverId: serverId,
                 photosPending: photosPending,
+                localPhotoPaths: localPhotoPaths,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -11612,6 +11687,7 @@ class $$VisitsTableTableTableManager
                 Value<String?> catatan = const Value.absent(),
                 Value<String?> serverId = const Value.absent(),
                 Value<int> photosPending = const Value.absent(),
+                Value<String?> localPhotoPaths = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -11631,6 +11707,7 @@ class $$VisitsTableTableTableManager
                 catatan: catatan,
                 serverId: serverId,
                 photosPending: photosPending,
+                localPhotoPaths: localPhotoPaths,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

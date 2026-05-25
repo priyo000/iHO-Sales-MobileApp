@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../app_database.dart';
@@ -121,6 +123,31 @@ class VisitDao extends DatabaseAccessor<AppDatabase> with _$VisitDaoMixin {
     );
   }
 
+  Future<void> savePhotoPaths(String visitId, Map<String, String> paths) async {
+    await (update(visitsTable)..where((t) => t.id.equals(visitId))).write(
+      VisitsTableCompanion(
+        localPhotoPaths: Value(jsonEncode(paths)),
+        photosPending: const Value(0),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<void> clearLocalPhotoPaths(String visitId) async {
+    await (update(visitsTable)..where((t) => t.id.equals(visitId))).write(
+      VisitsTableCompanion(
+        localPhotoPaths: const Value(null),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<List<VisitsTableData>> getVisitsWithLocalPhotos() async {
+    return await (select(visitsTable)
+          ..where((t) => t.localPhotoPaths.isNotNull()))
+        .get();
+  }
+
   Future<void> updateVisitPelangganId(String visitId, String pelangganId) async {
     await (update(visitsTable)..where((t) => t.id.equals(visitId))).write(
       VisitsTableCompanion(
@@ -220,6 +247,16 @@ class VisitDao extends DatabaseAccessor<AppDatabase> with _$VisitDaoMixin {
           ..where((t) => t.pelangganId.equals(pelangganId.toString()))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .watch();
+  }
+
+  Stream<VisitsTableData?> watchLastCompletedVisitByPelanggan(String pelangganId) {
+    return (select(visitsTable)
+          ..where((t) =>
+              t.pelangganId.equals(pelangganId.toString()) &
+              t.waktuCheckOut.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.waktuCheckOut)])
+          ..limit(1))
+        .watchSingleOrNull();
   }
 
   Stream<List<VisitsTableData>> watchTodayVisits() {

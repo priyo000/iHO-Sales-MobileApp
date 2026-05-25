@@ -129,6 +129,7 @@ class VisitsTable extends Table {
   TextColumn get catatan => text().nullable()();
   TextColumn get serverId => text().nullable()();
   IntColumn get photosPending => integer().withDefault(const Constant(0))();
+  TextColumn get localPhotoPaths => text().nullable()();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
 
@@ -371,7 +372,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration {
@@ -380,9 +381,18 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        // v21: Add localPhotoPaths to visits_table to retain checkout photos
+        // locally after sync (for offline review in Riwayat Kunjungan sheet).
+        if (from == 20) {
+          await customStatement(
+              'ALTER TABLE visits_table ADD COLUMN local_photo_paths TEXT');
+          return;
+        }
         // v20: Add clientRef to customers_table for robust offline dedup
         if (from == 19) {
           await customStatement('ALTER TABLE customers_table ADD COLUMN client_ref TEXT');
+          await customStatement(
+              'ALTER TABLE visits_table ADD COLUMN local_photo_paths TEXT');
           return;
         }
         // v19: Add namaRute to schedule_table for dashboard route name display
@@ -1943,6 +1953,17 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  /// Watch most recent completed visit (with check-out time) for pelanggan
+  Stream<VisitsTableData?> watchLastCompletedVisitByPelanggan(String pelangganId) {
+    return (select(visitsTable)
+          ..where((t) =>
+              t.pelangganId.equals(pelangganId.toString()) &
+              t.waktuCheckOut.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.waktuCheckOut)])
+          ..limit(1))
+        .watchSingleOrNull();
+  }
+
   /// Watch today's visits - used for dashboard SSOT
   Stream<List<VisitsTableData>> watchTodayVisits() {
     final today = DateTime.now().toIso8601String().substring(
@@ -1992,6 +2013,14 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<OrdersTableData>> watchOrdersByPelanggan(String pelangganId) {
     return (select(ordersTable)
           ..where((t) => t.pelangganId.equals(pelangganId))
+          ..orderBy([(t) => OrderingTerm.desc(t.tanggalTransaksi)]))
+        .watch();
+  }
+
+  /// Watch orders by kunjungan (visit)
+  Stream<List<OrdersTableData>> watchOrdersByKunjungan(String kunjunganId) {
+    return (select(ordersTable)
+          ..where((t) => t.kunjunganId.equals(kunjunganId))
           ..orderBy([(t) => OrderingTerm.desc(t.tanggalTransaksi)]))
         .watch();
   }

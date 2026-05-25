@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+import '../db/app_database.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // OfflinePhotoService
@@ -100,7 +103,7 @@ class OfflinePhotoService {
 
   /// Hapus foto-foto orphan: file di /offline_photos yang lebih tua dari
   /// [maxAgeDays] hari. Dipanggil saat startup untuk membersihkan sisa crash.
-  Future<void> cleanupOrphanPhotos({int maxAgeDays = 7}) async {
+  Future<void> cleanupOrphanPhotos({int maxAgeDays = 4}) async {
     try {
       final dir = await _getPhotoDir();
       final files = dir.listSync().whereType<File>().toList();
@@ -123,6 +126,74 @@ class OfflinePhotoService {
     } catch (e) {
       log('[OfflinePhoto] Cleanup gagal: $e');
     }
+  }
+
+  /// Hapus foto bukti kunjungan yang sudah disimpan via [VisitDao.savePhotoPaths]
+  /// dan lebih tua dari [maxAgeDays]. Set [maxAgeDays] = 0 untuk hapus semua
+  /// (manual purge).
+  /// Returns: jumlah file yang dihapus.
+  Future<int> cleanupOldVisitPhotos(
+    AppDatabase db, {
+    int maxAgeDays = 4,
+  }) async {
+    int totalDeleted = 0;
+    try {
+      final cutoff = maxAgeDays > 0
+          ? DateTime.now().subtract(Duration(days: maxAgeDays))
+          : DateTime.now().add(const Duration(days: 1));
+      final visits = await db.visitDao.getVisitsWithLocalPhotos();
+
+      for (final visit in visits) {
+        final raw = visit.localPhotoPaths;
+        if (raw == null || raw.isEmpty) continue;
+        Map<String, dynamic> parsed;
+        try {
+          parsed = jsonDecode(raw) as Map<String, dynamic>;
+        } catch (_) {
+          continue;
+        }
+
+        bool anyDeleted = false;
+        bool anyRetained = false;
+        for (final entry in parsed.entries) {
+          final path = entry.value?.toString();
+          if (path == null || path.isEmpty) continue;
+          final file = File(path);
+          if (!await file.exists()) {
+            anyDeleted = true;
+            continue;
+          }
+          if (maxAgeDays == 0) {
+            await file.delete();
+            anyDeleted = true;
+            totalDeleted++;
+            continue;
+          }
+          final stat = await file.stat();
+          if (stat.modified.isBefore(cutoff)) {
+            await file.delete();
+            anyDeleted = true;
+            totalDeleted++;
+          } else {
+            anyRetained = true;
+          }
+        }
+
+        if (anyDeleted && !anyRetained) {
+          await db.visitDao.clearLocalPhotoPaths(visit.id);
+        }
+      }
+
+      if (totalDeleted > 0) {
+        log(
+          '[OfflinePhoto] Visit photo cleanup: $totalDeleted file dihapus '
+          '(maxAgeDays=$maxAgeDays).',
+        );
+      }
+    } catch (e) {
+      log('[OfflinePhoto] cleanupOldVisitPhotos gagal: $e');
+    }
+    return totalDeleted;
   }
 
   /// Kompres file gambar sebelum upload.

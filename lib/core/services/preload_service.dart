@@ -111,6 +111,7 @@ class PreloadService {
       debugPrint('[Preload] 🚀 runIfStale() started');
 
       unawaited(_photoStorage.cleanupOrphanPhotos());
+      unawaited(_photoStorage.cleanupOldVisitPhotos(_db));
 
       final isOnline = await _connectivity.checkNow();
       debugPrint('[Preload] 📶 isOnline: $isOnline');

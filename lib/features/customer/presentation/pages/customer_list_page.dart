@@ -227,19 +227,19 @@ class _CustomerListPageState extends ConsumerState<CustomerListPage> {
   }
 
   Widget _buildFilterChips(String selectedFilter) {
-    return ColoredBox(
+    return Container(
+      width: double.infinity,
       color: AppColors.surface,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          AppSpacing.sm,
-        ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _filters.map((filter) {
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: _filters.map((filter) {
               final isSelected = selectedFilter == filter;
               return Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -251,8 +251,7 @@ class _CustomerListPageState extends ConsumerState<CustomerListPage> {
                       .setStatus(filter),
                 ),
               );
-            }).toList(),
-          ),
+          }).toList(),
         ),
       ),
     );

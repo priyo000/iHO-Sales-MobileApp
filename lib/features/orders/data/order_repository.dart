@@ -25,6 +25,61 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
   );
 });
 
+final ordersByKunjunganProvider =
+    StreamProvider.family<List<OrdersTableData>, String>((ref, kunjunganId) {
+  return ref
+      .watch(orderRepositoryProvider)
+      .watchOrdersByKunjungan(kunjunganId);
+});
+
+final ordersByPelangganProvider =
+    StreamProvider.autoDispose.family<List<OrdersTableData>, String>(
+        (ref, pelangganId) {
+  return ref
+      .watch(orderRepositoryProvider)
+      .watchOrdersByPelanggan(pelangganId);
+});
+
+/// Resolve orders for a specific visit — Drift-only stream (offline-first, SSOT).
+///
+/// Strategy:
+/// 1. Primary match: `orders.kunjunganId` cocok dengan `visit.id` (clientRef)
+///    atau `visit.serverId` (UUID setelah sync).
+/// 2. Fallback match: `orders.tanggalTransaksi` jatuh dalam window
+///    [waktuCheckIn, waktuCheckOut] dari visit ini.
+///
+/// Fallback diperlukan karena `orders.kunjunganId` tidak selalu di-rewrite
+/// saat sync menghasilkan ref mapping baru — orders lama mungkin masih
+/// menyimpan clientRef sementara visit sudah punya serverId, atau sebaliknya.
+final ordersForVisitProvider = StreamProvider.autoDispose
+    .family<List<OrdersTableData>, VisitsTableData>((ref, visit) {
+  final pelangganId = visit.pelangganId;
+  if (pelangganId == null || pelangganId.isEmpty) {
+    return Stream.value(const []);
+  }
+  final repo = ref.watch(orderRepositoryProvider);
+  return repo.watchOrdersByPelanggan(pelangganId).map((orders) {
+    final candidates = <String>{
+      visit.id,
+      if (visit.serverId != null && visit.serverId!.isNotEmpty) visit.serverId!,
+    };
+    final byKunjungan = orders
+        .where((o) =>
+            o.kunjunganId != null && candidates.contains(o.kunjunganId))
+        .toList();
+    if (byKunjungan.isNotEmpty) return byKunjungan;
+
+    final checkIn = DateTime.tryParse(visit.waktuCheckIn ?? '')?.toLocal();
+    final checkOut = DateTime.tryParse(visit.waktuCheckOut ?? '')?.toLocal();
+    if (checkIn == null || checkOut == null) return const <OrdersTableData>[];
+    return orders.where((o) {
+      final created =
+          DateTime.fromMillisecondsSinceEpoch(o.tanggalTransaksi);
+      return !created.isBefore(checkIn) && !created.isAfter(checkOut);
+    }).toList();
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // OrderRepository — SSOT Pattern (Phase 2)
 //
@@ -76,6 +131,11 @@ class OrderRepository {
   /// Watch orders by pelanggan
   Stream<List<OrdersTableData>> watchOrdersByPelanggan(String pelangganId) {
     return _db.watchOrdersByPelanggan(pelangganId);
+  }
+
+  /// Watch orders by kunjungan (visit)
+  Stream<List<OrdersTableData>> watchOrdersByKunjungan(String kunjunganId) {
+    return _db.watchOrdersByKunjungan(kunjunganId);
   }
 
   /// Watch single order by ID

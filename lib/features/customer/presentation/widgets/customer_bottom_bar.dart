@@ -9,9 +9,9 @@ class CustomerBottomBar extends StatelessWidget {
   final bool isLoading;
   final Stream<String> timerStream;
   final String currentDuration;
-  final VoidCallback onCallTap;
   final VoidCallback onCartTap;
   final VoidCallback onCheckInTap;
+  final VoidCallback? onLastVisitTap;
 
   const CustomerBottomBar({
     super.key,
@@ -20,9 +20,9 @@ class CustomerBottomBar extends StatelessWidget {
     required this.isLoading,
     required this.timerStream,
     required this.currentDuration,
-    required this.onCallTap,
     required this.onCartTap,
     required this.onCheckInTap,
+    this.onLastVisitTap,
   });
 
   @override
@@ -45,19 +45,22 @@ class CustomerBottomBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            IconButton(
-              onPressed: onCallTap,
-              icon: const Icon(Icons.call),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.grey[100],
-                foregroundColor: AppColors.textPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            if (onLastVisitTap != null) ...[
+              IconButton(
+                onPressed: onLastVisitTap,
+                tooltip: 'Riwayat Kunjungan Terakhir',
+                icon: const Icon(Icons.history),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey[100],
+                  foregroundColor: AppColors.textPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(12),
                 ),
-                padding: const EdgeInsets.all(12),
               ),
-            ),
-            const SizedBox(width: 8),
+              const SizedBox(width: 8),
+            ],
             IconButton(
               onPressed: onCartTap,
               icon: const Icon(Icons.add_shopping_cart),
