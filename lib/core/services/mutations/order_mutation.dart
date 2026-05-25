@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../db/app_database.dart';
 import '../../constants/api_constants.dart';
 import '../../constants/order_status.dart';
+import '../../utils/formatters.dart';
 import '../sync_service.dart';
 
 class OrderMutation {
@@ -110,7 +111,7 @@ class OrderMutation {
                   'diskon_amount': p['diskon_amount'] ?? 0,
                 })
             .toList(),
-        'created_at': DateTime.now().toIso8601String(),
+        'created_at': Formatters.nowServerIso(),
       };
     } catch (e, st) {
       dev.log('[OrderMutation] mutateCreateOrder failed: $e');

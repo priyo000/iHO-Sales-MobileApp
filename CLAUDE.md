@@ -156,3 +156,8 @@ Setiap repository yang tarik data dari server expose `Future<void> syncFromApi({
 - Repository > 500L → pertimbangkan split per domain concern.
 - DAO > 300L → pertimbangkan split.
 
+### Datetime / Timestamp
+- **Timestamp ke server / Drift**: pakai [Formatters.nowServerIso()](mobile_refactor/lib/core/utils/formatters.dart) atau `Formatters.toServerIso(dt)`. Jangan `DateTime.now().toIso8601String()` langsung — string naive akan ditebak timezone-nya oleh server (UTC+8) → drift 1 jam saat round-trip.
+- **Parsing dari server**: `DateTime.tryParse(...)?.toLocal()`. Conversion ke local time hanya di display layer (widget), bukan di repository/controller.
+- **Filter Drift "today"**: pakai range query dari local day boundaries di-convert ke UTC, bukan `LIKE 'YYYY-MM-DD%'`. Contoh: [getTodayVisits](mobile_refactor/lib/core/db/daos/visit_dao.dart).
+

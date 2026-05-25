@@ -2,10 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
 import 'package:sales_tracker_mobile/core/utils/formatters.dart';
-import 'package:sales_tracker_mobile/core/widgets/shimmer_loading.dart';
+import 'package:sales_tracker_mobile/core/utils/status_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_badge.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_card.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_empty_state.dart';
 import 'package:sales_tracker_mobile/core/widgets/app_error_view.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
+import 'package:sales_tracker_mobile/core/widgets/shimmer_loading.dart';
 import 'package:sales_tracker_mobile/features/prospecting/presentation/controllers/prospect_controller.dart';
 
 class ProspectingListPage extends ConsumerStatefulWidget {
@@ -25,9 +33,8 @@ class _ProspectingListPageState extends ConsumerState<ProspectingListPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _searchController.text = ref
-        .read(prospectControllerProvider.notifier)
-        .search;
+    _searchController.text =
+        ref.read(prospectControllerProvider.notifier).search;
   }
 
   @override
@@ -56,14 +63,12 @@ class _ProspectingListPageState extends ConsumerState<ProspectingListPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(prospectControllerProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
+    return AppScaffold(
       body: Column(
         children: [
-          // ── Search Bar ─────────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            color: Colors.white,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            color: AppColors.surface,
             child: TextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
@@ -72,7 +77,7 @@ class _ProspectingListPageState extends ConsumerState<ProspectingListPage> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: state.isRefreshing
                     ? const Padding(
-                        padding: EdgeInsets.all(12),
+                        padding: EdgeInsets.all(AppSpacing.md),
                         child: SizedBox(
                           width: 16,
                           height: 16,
@@ -80,65 +85,67 @@ class _ProspectingListPageState extends ConsumerState<ProspectingListPage> {
                         ),
                       )
                     : null,
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
               ),
             ),
           ),
-
-          // ── List ───────────────────────────────────────────────────
           Expanded(
             child: state.isRefreshing && state.items.isEmpty
                 ? const ListSkeleton()
                 : state.error != null && state.items.isEmpty
-                ? AppErrorView(
-                    message: 'Gagal memuat prospect: ${state.error}',
-                    onRetry: () =>
-                        ref.read(prospectControllerProvider.notifier).refresh(),
-                  )
-                : state.items.isEmpty && !state.isRefreshing
-                ? RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(prospectControllerProvider.notifier).refresh(),
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.7,
-                          child: _EmptyView(
-                            onAdd: () => context.push('/prospecting'),
+                    ? AppErrorView(
+                        message: 'Gagal memuat prospect: ${state.error}',
+                        onRetry: () => ref
+                            .read(prospectControllerProvider.notifier)
+                            .refresh(),
+                      )
+                    : state.items.isEmpty && !state.isRefreshing
+                        ? RefreshIndicator(
+                            onRefresh: () => ref
+                                .read(prospectControllerProvider.notifier)
+                                .refresh(),
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: [
+                                SizedBox(
+                                  height: MediaQuery.of(context).size.height *
+                                      0.7,
+                                  child: AppEmptyState(
+                                    icon: Icons.storefront_outlined,
+                                    title: 'Belum ada prospect',
+                                    message:
+                                        'Mulai perjalanan hari ini dengan menambah\nprospect toko baru.',
+                                    actionLabel: 'Tambah Prospect',
+                                    onAction: () =>
+                                        context.push('/prospecting'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () => ref
+                                .read(prospectControllerProvider.notifier)
+                                .refresh(),
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              itemCount: state.items.length +
+                                  (state.isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == state.items.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppSpacing.lg,
+                                    ),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                return _ProspectCard(data: state.items[index]);
+                              },
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(prospectControllerProvider.notifier).refresh(),
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount:
-                          state.items.length + (state.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == state.items.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                        return _ProspectCard(data: state.items[index]);
-                      },
-                    ),
-                  ),
           ),
         ],
       ),
@@ -147,19 +154,17 @@ class _ProspectingListPageState extends ConsumerState<ProspectingListPage> {
           await context.push('/prospecting');
           ref.read(prospectControllerProvider.notifier).refresh();
         },
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.textOnPrimary,
         icon: const Icon(Icons.add),
-        label: const Text(
+        label: Text(
           'Tambah Prospect',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: AppTextStyles.button,
         ),
       ),
     );
   }
 }
-
-// ─── _ProspectCard (unchanged) ────────────────────────────────────────────────
 
 class _ProspectCard extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -177,150 +182,122 @@ class _ProspectCard extends StatelessWidget {
         ? _formatDate(data['created_at'].toString())
         : '-';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.12)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.store_outlined,
-                color: AppTheme.primary,
-                size: 24,
-              ),
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (isOffline)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 6),
-                          child: Icon(
-                            Icons.access_time,
-                            size: 16,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      Expanded(
-                        child: Text(
-                          namaToko,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+            child: const Icon(
+              Icons.store_outlined,
+              color: AppColors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (isOffline)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 6),
+                        child: Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: AppColors.warning,
                         ),
                       ),
-                    ],
-                  ),
-                  if (kode.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      kode,
-                      style: TextStyle(
-                        color: AppTheme.primary.withValues(alpha: 0.8),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        namaToko,
+                        style: AppTextStyles.titleMedium
+                            .copyWith(fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.person_outline,
-                        size: 13,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          namaPemilik,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
+                ),
+                if (kode.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 13,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          alamat,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: (isOffline ? Colors.orange : Colors.amber)
-                        .withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    isOffline ? 'PENDING' : 'PROSPECT',
-                    style: TextStyle(
-                      color: isOffline ? Colors.orange : Colors.amber,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                  Text(
+                    kode,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
+                ],
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.person_outline,
+                      size: 13,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        namaPemilik,
+                        style: AppTextStyles.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  createdAt,
-                  style: TextStyle(color: Colors.grey[400], fontSize: 10),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 13,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        alamat,
+                        style: AppTextStyles.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AppBadge(
+                label: isOffline ? 'TERTUNDA' : 'PROSPEK',
+                color: isOffline
+                    ? StatusStyles.customerColor('PENDING')
+                    : StatusStyles.customerColor('PROSPECT'),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                createdAt,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -332,74 +309,5 @@ class _ProspectCard extends StatelessWidget {
         : DateTime.tryParse(raw)?.toLocal();
     if (dt == null) return raw;
     return Formatters.date(dt, pattern: 'HH:mm, d MMM yyyy');
-  }
-}
-
-// ─── Empty & Error ─────────────────────────────────────────────────────────────
-
-class _EmptyView extends StatelessWidget {
-  final VoidCallback onAdd;
-  const _EmptyView({required this.onAdd});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.storefront_outlined,
-                size: 64,
-                color: AppTheme.primary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Belum ada prospect',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Mulai perjalanan hari ini dengan menambah\nprospect toko baru.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: onAdd,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 14,
-                ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.add_location_alt_outlined),
-              label: const Text(
-                'Tambah Prospect',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

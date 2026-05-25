@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class MainShell extends StatefulWidget {
   final Widget child;
@@ -54,7 +54,7 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       body: widget.child,
-      bottomNavigationBar: Container(
+      bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           border: Border(
@@ -73,7 +73,7 @@ class _MainShellState extends State<MainShell> {
           onTap: (index) => _onItemTapped(index, context),
           type: BottomNavigationBarType.fixed,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          selectedItemColor: AppTheme.primary,
+          selectedItemColor: AppColors.primary,
           unselectedItemColor: Colors.grey,
           showSelectedLabels: true,
           showUnselectedLabels: true,

@@ -62,9 +62,10 @@ class OrderHistoryController extends Notifier<List<Map<String, dynamic>>> {
   List<Map<String, dynamic>> _applyFilters(List<OrderViewModel> orders) {
     var filtered = orders;
 
-    if (_filter.status != 'All') {
+    if (_filter.status != 'All' && _filter.status != 'Semua') {
       final statusMap = {
         'Pending': OrderStatus.pending.code,
+        'Tertunda': OrderStatus.pending.code,
         'Proses': 'APPROVED',
         'Sukses': 'COMPLETED',
         'Batal': 'CANCELLED',

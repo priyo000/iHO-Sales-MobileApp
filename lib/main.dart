@@ -24,7 +24,7 @@ void main() async {
   // Kunci orientasi ke Portrait saja
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  await initializeDateFormatting('id_ID', null);
+  await initializeDateFormatting('id_ID');
 
   // ── Parallel Init ──────────────────────────────────────────────────────────
   // Firebase dan Drift database diinisialisasi bersamaan — hemat ~100–300ms startup
@@ -191,6 +191,18 @@ class _SalesTrackerAppState extends ConsumerState<SalesTrackerApp>
       theme: AppTheme.lightTheme,
       themeMode: ThemeMode.light,
       routerConfig: appRouter,
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: media.textScaler.clamp(
+              minScaleFactor: 1.0,
+              maxScaleFactor: 1.15,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

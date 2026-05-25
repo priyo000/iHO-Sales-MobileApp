@@ -91,7 +91,7 @@ class TokenStorage {
       final exp = data['exp'] as int?;
       if (exp == null) return true;
       final expiresAt = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
-      final buffer = const Duration(minutes: 5);
+      const buffer = Duration(minutes: 5);
       return DateTime.now().isAfter(expiresAt.subtract(buffer));
     } catch (_) {
       return false;
@@ -468,7 +468,6 @@ class AuthInterceptor extends Interceptor {
                 : DioException(
                     requestOptions: opts,
                     error: e,
-                    type: DioExceptionType.unknown,
                   ),
           );
         }

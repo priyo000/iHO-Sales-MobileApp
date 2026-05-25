@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_loading.dart';
+import '../../../../core/widgets/app_scaffold.dart';
 import '../../domain/notification_entity.dart';
 import '../controllers/notifications_controller.dart';
 
@@ -13,19 +18,12 @@ class NotificationsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(notificationsStreamProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
+    return AppScaffold(
       appBar: AppBar(
-        title: const Text(
-          'Notifikasi',
-          style: TextStyle(color: Colors.black87),
-        ),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        elevation: 0,
+        title: const Text('Notifikasi'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.done_all, color: AppTheme.primary),
+            icon: const Icon(Icons.done_all, color: AppColors.primary),
             tooltip: 'Tandai semua dibaca',
             onPressed: () {
               ref.read(notificationsControllerProvider.notifier).markAllRead();
@@ -39,38 +37,17 @@ class NotificationsPage extends ConsumerWidget {
         ],
       ),
       body: notificationsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Gagal memuat notifikasi: $error',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+        loading: () => const AppLoading(),
+        error: (error, _) => AppEmptyState(
+          icon: Icons.error_outline,
+          title: 'Gagal memuat notifikasi',
+          message: error.toString(),
         ),
         data: (notifications) {
           if (notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_off_outlined,
-                    size: 64,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Belum ada notifikasi',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                  ),
-                ],
-              ),
+            return const AppEmptyState(
+              icon: Icons.notifications_off_outlined,
+              title: 'Belum ada notifikasi',
             );
           }
 
@@ -95,19 +72,10 @@ class _NotificationTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    IconData icon;
-    Color iconColor;
-    Color bgColor;
-
-    // Use default notification icon since our entity doesn't have 'jenis'
-    icon = Icons.notifications_outlined;
-    iconColor = Colors.grey;
-    bgColor = Colors.grey.withValues(alpha: 0.1);
-
     return Material(
       color: notif.isRead
-          ? Colors.white
-          : AppTheme.primary.withValues(alpha: 0.05),
+          ? AppColors.surface
+          : AppColors.primary.withValues(alpha: 0.05),
       child: InkWell(
         onTap: () {
           if (!notif.isRead && notif.id != null) {
@@ -117,59 +85,60 @@ class _NotificationTile extends ConsumerWidget {
           }
         },
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: bgColor,
+                  color: AppColors.textMuted.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: iconColor, size: 24),
+                child: const Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.textMuted,
+                  size: 24,
+                ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
                             notif.judul ?? '',
-                            style: TextStyle(
+                            style: AppTextStyles.titleLarge.copyWith(
                               fontWeight: notif.isRead
                                   ? FontWeight.normal
                                   : FontWeight.bold,
-                              fontSize: 16,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (notif.createdAt != null)
+                        if (notif.createdAt != null) ...[
+                          const SizedBox(width: AppSpacing.sm),
                           Text(
                             timeago.format(
                               DateTime.tryParse(notif.createdAt!) ??
                                   DateTime.now(),
                               locale: 'id',
                             ),
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                            ),
+                            style: AppTextStyles.caption,
                           ),
+                        ],
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       notif.pesan ?? '',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 14,
-                        height: 1.4,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],

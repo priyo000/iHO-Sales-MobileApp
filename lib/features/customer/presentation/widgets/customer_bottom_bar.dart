@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class CustomerBottomBar extends StatelessWidget {
   final bool isCheckedIn;
@@ -28,7 +28,6 @@ class CustomerBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      bottom: true,
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         decoration: BoxDecoration(
@@ -51,7 +50,7 @@ class CustomerBottomBar extends StatelessWidget {
               icon: const Icon(Icons.call),
               style: IconButton.styleFrom(
                 backgroundColor: Colors.grey[100],
-                foregroundColor: Colors.grey[800],
+                foregroundColor: AppColors.textPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -64,7 +63,7 @@ class CustomerBottomBar extends StatelessWidget {
               icon: const Icon(Icons.add_shopping_cart),
               style: IconButton.styleFrom(
                 backgroundColor: Colors.grey[100],
-                foregroundColor: Colors.grey[800],
+                foregroundColor: AppColors.textPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -89,7 +88,7 @@ class CustomerBottomBar extends StatelessWidget {
             onPressed: onCheckInTap,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.surface,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -107,7 +106,7 @@ class CustomerBottomBar extends StatelessWidget {
         onPressed: isLoading ? null : onCheckInTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.orange,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.surface,
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -124,8 +123,8 @@ class CustomerBottomBar extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: isLoading ? null : onCheckInTap,
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.surface,
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -136,7 +135,7 @@ class CustomerBottomBar extends StatelessWidget {
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
-                color: Colors.white,
+                color: AppColors.surface,
                 strokeWidth: 2,
               ),
             )

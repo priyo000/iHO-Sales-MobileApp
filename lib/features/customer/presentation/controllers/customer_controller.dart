@@ -27,7 +27,7 @@ final customerSearchProvider = NotifierProvider<CustomerSearchNotifier, String>(
 
 class CustomerStatusNotifier extends Notifier<String> {
   @override
-  String build() => 'All';
+  String build() => 'Semua';
   void setStatus(String status) => state = status;
 }
 
@@ -66,9 +66,13 @@ final customersByStatusStreamProvider =
     Provider.family<Stream<List<CustomersTableData>>, String>((ref, status) {
       final repo = ref.watch(customerRepositoryProvider);
       final db = ref.watch(appDatabaseProvider);
-      final statusKey = status == 'All'
-          ? 'active,pending'
-          : status.toLowerCase();
+      final statusKey = switch (status) {
+        'All' || 'Semua' => 'active,pending',
+        'Aktif' => 'active',
+        'Tertunda' => 'pending',
+        'Prospek' => 'prospect',
+        _ => status.toLowerCase(),
+      };
 
       // Fallback: if Drift has zero customers, trigger sync in background.
       // This covers cases where PreloadService failed or was skipped.
@@ -131,7 +135,12 @@ class CustomerController
     required bool reset,
   }) async {
     final repo = ref.read(customerRepositoryProvider);
-    final statusKey = status == 'All' ? 'active,pending' : status.toLowerCase();
+    final statusKey = switch (status) {
+      'Semua' || 'All' => 'active,pending',
+      'Aktif' => 'active',
+      'Tertunda' => 'pending',
+      _ => status.toLowerCase(),
+    };
 
     // 1. Ambil data dari Cache Lokal SEKETIKA (Instant UX)
     // getCustomers() returns a Map with 'data' key containing List<CustomersTableData> converted to List<Map>
@@ -139,7 +148,6 @@ class CustomerController
       search: search.isEmpty ? null : search,
       status: statusKey,
       page: page,
-      perPage: _perPage,
     );
 
     // cachedResponse is {'data': [...List of customer maps...], 'current_page': 1, 'last_page': N}
@@ -154,8 +162,6 @@ class CustomerController
       items: reset ? dataList.cast<Map<String, dynamic>>() : [...existingItems, ...dataList.cast<Map<String, dynamic>>()],
       currentPage: currentPage,
       lastPage: lastPage,
-      isLoadingMore: false,
-      isRefreshing: false,
     );
   }
 
@@ -174,8 +180,6 @@ class CustomerController
       final response = await repo.getCustomers(
         search: search.isEmpty ? null : search,
         status: statusKey,
-        page: 1,
-        perPage: _perPage,
       );
 
       // response is {'data': [...], 'current_page': 1, 'last_page': N}
@@ -199,8 +203,6 @@ class CustomerController
             items: parsed.cast<Map<String, dynamic>>(),
             currentPage: parsedPage,
             lastPage: parsedLastPage,
-            isLoadingMore: false,
-            isRefreshing: false,
           ),
         );
       }
@@ -297,10 +299,11 @@ class CustomerController
   Future<void> refresh() async {
     final repo = ref.read(customerRepositoryProvider);
     final status = ref.read(customerStatusFilterProvider);
-    final statusKey = status == 'All' ? 'active,pending' : status.toLowerCase();
+    final statusKey = (status == 'All' || status == 'Semua')
+        ? 'active,pending'
+        : status.toLowerCase();
     await repo.syncCustomersFromApi(
       status: statusKey,
-      perPage: -1,
       forceRefresh: true,
     );
     ref.invalidateSelf();

@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:sales_tracker_mobile/core/auth/auth_controller.dart';
 import 'package:sales_tracker_mobile/core/auth/user_provider.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
 import 'package:sales_tracker_mobile/core/services/app_update_service.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_badge.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_card.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_loading.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
 
 class UserProfilePage extends ConsumerWidget {
   const UserProfilePage({super.key});
@@ -14,8 +21,7 @@ class UserProfilePage extends ConsumerWidget {
     final user = ref.watch(userProvider);
     final userName =
         user?['karyawan']?['nama_lengkap'] ?? user?['username'] ?? 'User';
-    final userPhone =
-        user?['karyawan']?['no_hp'] ??
+    final userPhone = user?['karyawan']?['no_hp'] ??
         user?['no_hp'] ??
         user?['karyawan']?['no_telepon'] ??
         '-';
@@ -23,64 +29,44 @@ class UserProfilePage extends ConsumerWidget {
         ? 'Super Admin'
         : 'Sales Lapangan';
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profil Saya'), centerTitle: true),
+    return AppScaffold(
+      appBar: AppBar(title: const Text('Profil Saya')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
-            // Profile Header
             Center(
               child: Column(
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: AppTheme.primary,
+                    backgroundColor: AppColors.primary,
                     child: Text(
                       userName.isNotEmpty
                           ? userName.substring(0, 1).toUpperCase()
                           : '?',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: AppTextStyles.displayLarge.copyWith(
+                        color: AppColors.textOnPrimary,
                         fontSize: 40,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   Text(
                     userName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.headingLarge,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      userRole,
-                      style: TextStyle(
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppBadge(
+                    label: userRole,
+                    color: AppColors.primary,
+                    size: AppBadgeSize.md,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 40),
-
-            // Informasi Aplikasi Section (Moved Up)
+            const SizedBox(height: AppSpacing.xxl),
             Consumer(
               builder: (context, ref, _) {
                 final updateAsync = ref.watch(appUpdateServiceProvider);
@@ -92,9 +78,8 @@ class UserProfilePage extends ConsumerWidget {
                     final currentBuild =
                         (update['currentBuild'] as String?) ?? '-';
 
-                    return _buildSection(context, 'Informasi Aplikasi', [
+                    return _buildSection('Informasi Aplikasi', [
                       _buildSettingItem(
-                        context,
                         title: 'Versi Aplikasi',
                         subtitle: 'v$currentVersion ($currentBuild)',
                         icon: Icons.info_outline_rounded,
@@ -103,61 +88,48 @@ class UserProfilePage extends ConsumerWidget {
                       if (hasUpdate) _buildUpdateCard(context, ref, update),
                     ]);
                   },
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: CircularProgressIndicator(),
-                    ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(AppSpacing.xl),
+                    child: AppLoading(),
                   ),
-                  error: (err, _) =>
-                      _buildSection(context, 'Informasi Aplikasi', [
-                        _buildSettingItem(
-                          context,
-                          title: 'Cek Update',
-                          subtitle: 'Gagal mengecek update: $err',
-                          icon: Icons.sync_problem_rounded,
-                          onTap: () => ref.refresh(appUpdateServiceProvider),
-                        ),
-                      ]),
+                  error: (err, _) => _buildSection('Informasi Aplikasi', [
+                    _buildSettingItem(
+                      title: 'Cek Update',
+                      subtitle: 'Gagal mengecek update: $err',
+                      icon: Icons.sync_problem_rounded,
+                      onTap: () => ref.refresh(appUpdateServiceProvider),
+                    ),
+                  ]),
                 );
               },
             ),
-
-            const SizedBox(height: 24),
-
-            // Akun Section
-            _buildSection(context, 'Informasi Akun', [
+            const SizedBox(height: AppSpacing.xl),
+            _buildSection('Informasi Akun', [
               _buildSettingItem(
-                context,
                 title: 'Kode Karyawan',
                 subtitle:
                     user?['karyawan']?['kode_karyawan']?.toString() ?? '-',
                 icon: Icons.badge_outlined,
               ),
               _buildSettingItem(
-                context,
                 title: 'Username',
                 subtitle: user?['username'] ?? '-',
                 icon: Icons.alternate_email_rounded,
               ),
               _buildSettingItem(
-                context,
                 title: 'Status Pekerjaan',
                 subtitle: user?['karyawan']?['status_karyawan'] ?? 'Aktif',
                 icon: Icons.work_outline_rounded,
               ),
               _buildSettingItem(
-                context,
                 title: 'No. WhatsApp',
                 subtitle: userPhone,
                 icon: Icons.phone_android_rounded,
               ),
             ]),
-
-            // Keamanan Section
-            _buildSection(context, 'Keamanan', [
+            const SizedBox(height: AppSpacing.xl),
+            _buildSection('Keamanan', [
               _buildSettingItem(
-                context,
                 title: 'Ganti Password',
                 subtitle: 'Update keamanan akun Anda',
                 icon: Icons.lock_outline_rounded,
@@ -165,44 +137,30 @@ class UserProfilePage extends ConsumerWidget {
                 showChevron: true,
               ),
             ]),
-
-            const SizedBox(height: 40),
-
-            // Logout Button
+            const SizedBox(height: AppSpacing.xxl),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: () => _showLogoutConfirmation(context, ref),
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text('Keluar Aplikasi'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[50],
-                  foregroundColor: Colors.red,
+                  backgroundColor: AppColors.error.withValues(alpha: 0.08),
+                  foregroundColor: AppColors.error,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.lg,
                   ),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.logout_rounded, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Keluar Aplikasi',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
+                  textStyle: AppTextStyles.button.copyWith(
+                    color: AppColors.error,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                  ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 24),
-
-            const SizedBox(height: 48),
-            // Logo or branding can go here
+            const SizedBox(height: AppSpacing.xxxl),
           ],
         ),
       ),
@@ -220,69 +178,67 @@ class UserProfilePage extends ConsumerWidget {
     final isInstalling = status == 'INSTALLING';
     final isForce = update['isForce'] == true;
 
-    // Status color mapping
-    Color statusColor = Colors.blue;
+    Color statusColor = AppColors.info;
     String statusText = 'Update Tersedia (v${update['versionName']})';
 
     if (status == 'PERMISSION_NOT_GRANTED_ERROR') {
-      statusColor = Colors.orange;
+      statusColor = AppColors.warning;
       statusText = 'Izin Instalasi Ditolak';
     } else if (status == 'DOWNLOAD_ERROR' || status == 'INTERNAL_ERROR') {
-      statusColor = Colors.red;
+      statusColor = AppColors.error;
       statusText = 'Gagal Download/Install';
     } else if (status == 'STARTING' || status == 'STREAM_OPENED') {
-      statusColor = Colors.blue;
       statusText = 'Menyambung ke Server...';
     } else if (isDownloading) {
-      statusColor = Colors.blue;
       statusText = 'Mendownload Update ($progress%)';
     } else if (isInstalling) {
-      statusColor = Colors.green;
+      statusColor = AppColors.success;
       statusText = 'Memulai Instalasi...';
     }
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: Colors.blue[50],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.blue[100]!),
+          color: AppColors.info.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          border: Border.all(
+            color: AppColors.info.withValues(alpha: 0.2),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.system_update_rounded, color: Colors.blue),
-                const SizedBox(width: 12),
+                const Icon(
+                  Icons.system_update_rounded,
+                  color: AppColors.info,
+                ),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         statusText,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: statusColor,
-                        ),
+                        style: AppTextStyles.titleMedium
+                            .copyWith(color: statusColor),
                       ),
                       if (isForce)
-                        const Text(
+                        Text(
                           'Update ini wajib diinstal.',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 10,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.error,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       if (status == 'PERMISSION_NOT_GRANTED_ERROR')
-                        const Text(
+                        Text(
                           'Silakan izinkan "Install Unknown Apps" untuk aplikasi ini.',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontSize: 10,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.warning,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -293,39 +249,41 @@ class UserProfilePage extends ConsumerWidget {
             ),
             if (update['releaseNotes'] != null &&
                 update['releaseNotes'].toString().isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Catatan Rilis:',
-                style: TextStyle(
-                  fontSize: 12,
+                style: AppTextStyles.bodySmall.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue[900],
+                  color: AppColors.info,
                 ),
               ),
               Text(
                 update['releaseNotes'],
-                style: TextStyle(fontSize: 12, color: Colors.blue[800]),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.info,
+                ),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             if (isDownloading) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 child: LinearProgressIndicator(
-                  value:
-                      (status == 'DOWNLOADING' ||
+                  value: (status == 'DOWNLOADING' ||
                           status == 'STARTING' ||
                           status == 'STREAM_OPENED')
                       ? (double.tryParse(progress.toString()) ?? 0) / 100
                       : (isInstalling ? null : 0),
-                  backgroundColor: Colors.blue[100],
+                  backgroundColor: AppColors.info.withValues(alpha: 0.1),
                   valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Sedang mendownload: $progress%',
-                style: const TextStyle(fontSize: 12, color: Colors.blue),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.info,
+                ),
               ),
             ] else if (isInstalling) ...[
               const Center(
@@ -335,15 +293,16 @@ class UserProfilePage extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Center(
+              const SizedBox(height: AppSpacing.sm),
+              Center(
                 child: Text(
                   'Siap menginstal. Tunggu sebentar...',
-                  style: TextStyle(color: Colors.blue, fontSize: 12),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.info,
+                  ),
                 ),
               ),
             ] else ...[
-              // Only show Button if idle or fatal error
               if (status == 'idle' ||
                   status == 'PERMISSION_NOT_GRANTED_ERROR' ||
                   status.contains('ERROR'))
@@ -365,19 +324,19 @@ class UserProfilePage extends ConsumerWidget {
                           : 'Coba Lagi',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: status == 'idle'
-                          ? Colors.blue
-                          : statusColor,
-                      foregroundColor: Colors.white,
+                      backgroundColor:
+                          status == 'idle' ? AppColors.info : statusColor,
+                      foregroundColor: AppColors.textOnPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
                       ),
                     ),
                   ),
                 )
               else
-                // Don't show button while active
                 const SizedBox.shrink(),
             ],
           ],
@@ -386,45 +345,34 @@ class UserProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSection(
-    BuildContext context,
-    String title,
-    List<Widget> children,
-  ) {
+  Widget _buildSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          padding: const EdgeInsets.only(
+            left: AppSpacing.xs,
+            bottom: AppSpacing.md,
+          ),
           child: Text(
             title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
+            style: AppTextStyles.titleLarge.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
+        AppCard(
+          padding: EdgeInsets.zero,
+          shadow: true,
+          bordered: false,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
           child: Column(children: children),
         ),
       ],
     );
   }
 
-  Widget _buildSettingItem(
-    BuildContext context, {
+  Widget _buildSettingItem({
     required String title,
     required String subtitle,
     required IconData icon,
@@ -434,26 +382,26 @@ class UserProfilePage extends ConsumerWidget {
     return ListTile(
       onTap: onTap,
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.1),
+          color: AppColors.primary.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 20, color: AppTheme.primary),
+        child: Icon(icon, size: 20, color: AppColors.primary),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-      ),
+      title: Text(title, style: AppTextStyles.titleMedium),
+      subtitle: Text(subtitle, style: AppTextStyles.bodySmall),
       trailing: showChevron
-          ? const Icon(Icons.chevron_right, size: 20, color: Colors.grey)
+          ? const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.textMuted,
+            )
           : null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
     );
   }
 
@@ -476,10 +424,12 @@ class UserProfilePage extends ConsumerWidget {
                 context.go('/login');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: Text(
               'Ya, Keluar',
-              style: TextStyle(color: Colors.white),
+              style: AppTextStyles.button,
             ),
           ),
         ],

@@ -1,13 +1,20 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+
 import 'package:sales_tracker_mobile/core/auth/user_provider.dart';
-import '../../data/models/product_model.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_card.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
+
 import '../../data/models/cart_item_model.dart';
+import '../../data/models/product_model.dart';
 import '../../data/promo_calculator.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/promo_controller.dart';
@@ -16,7 +23,7 @@ import '../widgets/inline_promo_selector.dart';
 class ProductOrderPage extends ConsumerStatefulWidget {
   final Product product;
   final String? pelangganId;
-  final CartItem? existingCartItem; // null = tambah baru, non-null = edit
+  final CartItem? existingCartItem;
 
   const ProductOrderPage({
     super.key,
@@ -39,14 +46,14 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
   bool _isRefreshingPromo = false;
   ProductUnit? _selectedUnit;
 
-  final _fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _fmt =
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
   @override
   void initState() {
     super.initState();
     _qty = widget.existingCartItem?.quantity ?? 1;
 
-    // Initialize unit selection: restore from cart item or default to largest unit
     if (widget.existingCartItem?.selectedUnitId != null) {
       _selectedUnit = widget.product.units
           .where((u) => u.id == widget.existingCartItem!.selectedUnitId)
@@ -100,7 +107,6 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
   void _confirm() {
     final cartNotifier = ref.read(cartControllerProvider.notifier);
     if (widget.isEdit) {
-      // Replace entire cart item with fresh product from catalog (has units populated)
       cartNotifier.removeItem(widget.product.id);
       cartNotifier.addItem(widget.product, _qty, selectedUnit: _selectedUnit);
       if (_price != (_selectedUnit?.hargaJual ?? widget.product.hargaJual)) {
@@ -113,10 +119,11 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
       }
     }
 
-    // Sync diskonAmount terkini ke promoSelectionProvider sebelum pop
-    final selectedPromo = ref.read(promoSelectionProvider).promoForProduct(widget.product.id);
+    final selectedPromo =
+        ref.read(promoSelectionProvider).promoForProduct(widget.product.id);
     if (selectedPromo != null && widget.pelangganId != null) {
-      final promosAsync = ref.read(availablePromosProvider(widget.pelangganId!));
+      final promosAsync =
+          ref.read(availablePromosProvider(widget.pelangganId!));
       final promos = promosAsync.when(
         data: (v) => v,
         loading: () => null,
@@ -127,7 +134,11 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
         final allCartItems = ref.read(cartControllerProvider).items;
         final simulatedItems = [
           ...allCartItems.where((i) => i.product.id != widget.product.id),
-          CartItem(product: widget.product, quantity: _qty, negotiatedPrice: effectivePrice),
+          CartItem(
+            product: widget.product,
+            quantity: _qty,
+            negotiatedPrice: effectivePrice,
+          ),
         ];
         double updatedDiskon = 0;
         if (selectedPromo.jenis == 'aturan_harga') {
@@ -135,22 +146,31 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
               .where((p) => p.idCampaign == selectedPromo.idCampaign)
               .firstOrNull;
           if (promo != null) {
-            updatedDiskon = PromoCalculator.aturanHargaDiskonPerProduk(promo, simulatedItems, widget.product.id);
+            updatedDiskon = PromoCalculator.aturanHargaDiskonPerProduk(
+              promo,
+              simulatedItems,
+              widget.product.id,
+            );
           }
         } else if (selectedPromo.jenis == 'grosir') {
           final promo = promos.grosir
               .where((p) => p.idCampaign == selectedPromo.idCampaign)
               .firstOrNull;
           if (promo != null) {
-            updatedDiskon = PromoCalculator.grosirDiskonPerProduk(promo, simulatedItems, widget.product.id);
+            updatedDiskon = PromoCalculator.grosirDiskonPerProduk(
+              promo,
+              simulatedItems,
+              widget.product.id,
+            );
           }
         }
-        ref.read(promoSelectionProvider.notifier)
+        ref
+            .read(promoSelectionProvider.notifier)
             .updateDiskonForProduct(widget.product.id, updatedDiskon);
       }
     }
 
-    context.pop(true); // return true = berhasil ditambahkan/diupdate
+    context.pop(true);
   }
 
   Future<void> _refreshPromo() async {
@@ -165,7 +185,9 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
 
   void _removeFromCart() {
     ref.read(cartControllerProvider.notifier).removeItem(widget.product.id);
-    ref.read(promoSelectionProvider.notifier).clearPromoForProduct(widget.product.id);
+    ref
+        .read(promoSelectionProvider.notifier)
+        .clearPromoForProduct(widget.product.id);
     context.pop(false);
   }
 
@@ -176,22 +198,25 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
     final selectedPromo = promoSelection.promoForProduct(widget.product.id);
     final priceLocked = selectedPromo != null;
 
-    // Kalau promo dipilih, gunakan harga dari cart (sudah di-reset ke standar)
     final effectivePrice = priceLocked ? widget.product.hargaJual : _price;
     final totalHarga = effectivePrice * _qty;
 
-    // Build cart items untuk promo calculation (simulasi)
     final allCartItems = ref.watch(cartControllerProvider).items;
     final simulatedItems = [
       ...allCartItems.where((i) => i.product.id != widget.product.id),
-      CartItem(product: widget.product, quantity: _qty, negotiatedPrice: effectivePrice),
+      CartItem(
+        product: widget.product,
+        quantity: _qty,
+        negotiatedPrice: effectivePrice,
+      ),
     ];
-    final subtotalSimulated = simulatedItems.fold<double>(0, (s, i) => s + i.totalPrice);
+    final subtotalSimulated =
+        simulatedItems.fold<double>(0, (s, i) => s + i.totalPrice);
 
-    // Hitung ulang diskon secara realtime berdasarkan qty & simulatedItems terkini
     double diskonPromo = 0;
     if (selectedPromo != null && widget.pelangganId != null) {
-      final promosAsync = ref.watch(availablePromosProvider(widget.pelangganId!));
+      final promosAsync =
+          ref.watch(availablePromosProvider(widget.pelangganId!));
       final promos = promosAsync.when(
         data: (v) => v,
         loading: () => null,
@@ -203,299 +228,114 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
               .where((p) => p.idCampaign == selectedPromo.idCampaign)
               .firstOrNull;
           if (promo != null) {
-            diskonPromo = PromoCalculator.aturanHargaDiskonPerProduk(promo, simulatedItems, widget.product.id);
+            diskonPromo = PromoCalculator.aturanHargaDiskonPerProduk(
+              promo,
+              simulatedItems,
+              widget.product.id,
+            );
           }
         } else if (selectedPromo.jenis == 'grosir') {
           final promo = promos.grosir
               .where((p) => p.idCampaign == selectedPromo.idCampaign)
               .firstOrNull;
           if (promo != null) {
-            diskonPromo = PromoCalculator.grosirDiskonPerProduk(promo, simulatedItems, widget.product.id);
+            diskonPromo = PromoCalculator.grosirDiskonPerProduk(
+              promo,
+              simulatedItems,
+              widget.product.id,
+            );
           }
         }
       }
     }
 
-    final totalSetelahDiskon = (totalHarga - diskonPromo).clamp(0, double.infinity);
+    final totalSetelahDiskon =
+        (totalHarga - diskonPromo).clamp(0, double.infinity);
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+    return AppScaffold(
       appBar: AppBar(
-        title: Text(
-          widget.isEdit ? 'Edit Produk' : 'Tambah ke Pesanan',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
+        title: Text(widget.isEdit ? 'Edit Produk' : 'Tambah ke Pesanan'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, size: 18),
-          onPressed: () => context.pop(null),
+          onPressed: () => context.pop(),
         ),
         actions: [
           if (widget.isEdit)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+              icon: const Icon(Icons.delete_outline, color: AppColors.error),
               tooltip: 'Hapus dari pesanan',
               onPressed: () => _confirmRemove(context),
             ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Product Info Card ──────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: CachedNetworkImage(
-                      imageUrl: widget.product.gambarUrl ??
-                          'https://placehold.co/200x200/png?text=Produk',
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      errorWidget: (ctx2, url2, err2) => Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.broken_image, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.product.namaProduk,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'SKU: ${widget.product.sku}',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _fmt.format(_selectedUnit?.hargaJual ?? widget.product.hargaJual),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primary,
-                            decoration: (_price < (_selectedUnit?.hargaJual ?? widget.product.hargaJual) && !priceLocked)
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // ── Unit Selector ─────────────────────────────────────
+            _buildProductInfoCard(priceLocked: priceLocked),
+            const SizedBox(height: AppSpacing.xl),
             if (widget.product.units.length > 1) ...[
-              _SectionLabel('SATUAN'),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedUnit?.id,
-                    isExpanded: true,
-                    items: widget.product.units.map((u) {
-                      final priceLabel = u.hargaJual != null
-                          ? ' - ${_fmt.format(u.hargaJual)}'
-                          : '';
-                      return DropdownMenuItem<String>(
-                        value: u.id,
-                        child: Text(
-                          '${u.nama}$priceLabel',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (unitId) {
-                      final unit = widget.product.units.firstWhere((u) => u.id == unitId);
-                      setState(() {
-                        _selectedUnit = unit;
-                        _price = unit.hargaJual ?? widget.product.hargaJual;
-                        _priceController.text = _price.toStringAsFixed(0);
-                      });
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              const _SectionLabel('SATUAN'),
+              const SizedBox(height: AppSpacing.sm),
+              _buildUnitSelector(),
+              const SizedBox(height: AppSpacing.lg),
             ],
-
-            // ── Qty ────────────────────────────────────────────────
-            _SectionLabel('JUMLAH'),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Row(
-                children: [
-                  _QtyButton(
-                    icon: Icons.remove,
-                    onTap: _decrementQty,
-                    enabled: _qty > 1,
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _qtyController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onChanged: _onQtyTextChanged,
-                    ),
-                  ),
-                  Text(
-                    _selectedUnit?.nama ?? widget.product.satuan,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(width: 8),
-                  _QtyButton(
-                    icon: Icons.add,
-                    onTap: _incrementQty,
-                    enabled: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // ── Harga ──────────────────────────────────────────────
+            const _SectionLabel('JUMLAH'),
+            const SizedBox(height: AppSpacing.sm),
+            _buildQtySelector(),
+            const SizedBox(height: AppSpacing.xl),
             if (allowOpenPrice) ...[
-              _SectionLabel('HARGA NEGO'),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: priceLocked ? Colors.grey.shade100 : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: priceLocked ? Colors.orange.shade200 : Colors.grey.shade200,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      'Rp',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: priceLocked ? Colors.grey.shade400 : Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _priceController,
-                        enabled: !priceLocked,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: false),
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: priceLocked ? Colors.grey.shade400 : Colors.black87,
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                        onChanged: _onPriceChanged,
-                      ),
-                    ),
-                    if (priceLocked)
-                      Row(
-                        children: [
-                          Icon(Icons.lock, size: 13, color: Colors.orange.shade400),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Promo aktif',
-                            style: TextStyle(fontSize: 10, color: Colors.orange.shade600),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
+              const _SectionLabel('HARGA NEGO'),
+              const SizedBox(height: AppSpacing.sm),
+              _buildPriceField(priceLocked: priceLocked),
               if (priceLocked)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 4),
+                  padding: const EdgeInsets.only(
+                    top: AppSpacing.xs,
+                    left: AppSpacing.xs,
+                  ),
                   child: Text(
                     'Harga dikunci karena promo aktif. Hapus promo untuk ubah harga.',
-                    style: TextStyle(fontSize: 10, color: Colors.orange.shade700),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.warning,
+                    ),
                   ),
                 ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
             ],
-
-            // Promo inline
             if (widget.pelangganId != null) ...[
               Row(
                 children: [
                   const Expanded(child: _SectionLabel('PROMO')),
-                  _isRefreshingPromo
-                      ? const SizedBox(
-                          width: 16, height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : GestureDetector(
-                          onTap: _refreshPromo,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.refresh, size: 14, color: Colors.grey.shade500),
-                              const SizedBox(width: 3),
-                              Text('Refresh', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                            ],
+                  if (_isRefreshingPromo)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: _refreshPromo,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.refresh,
+                            size: 14,
+                            color: AppColors.textMuted,
                           ),
-                        ),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Refresh',
+                            style: AppTextStyles.caption,
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               InlinePromoSelector(
                 product: widget.product,
                 qty: _qty,
@@ -504,37 +344,31 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
                 simulatedItems: simulatedItems,
                 subtotal: subtotalSimulated,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
             ],
-
-            // ── Summary ────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade100),
-              ),
+            AppCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 children: [
                   _SummaryLine(
-                    label: 'Harga × $_qty ${_selectedUnit?.nama ?? widget.product.satuan}',
+                    label:
+                        'Harga × $_qty ${_selectedUnit?.nama ?? widget.product.satuan}',
                     value: _fmt.format(totalHarga),
                   ),
                   if (diskonPromo > 0) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     _SummaryLine(
                       label: 'Diskon',
                       value: '- ${_fmt.format(diskonPromo)}',
                       isDiscount: true,
                     ),
                   ],
-                  const Divider(height: 16),
+                  const Divider(height: AppSpacing.lg),
                   _SummaryLine(
                     label: 'Total',
                     value: _fmt.format(totalSetelahDiskon),
                     bold: true,
-                    color: AppTheme.primary,
+                    color: AppColors.primary,
                   ),
                 ],
               ),
@@ -543,51 +377,246 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      bottomBar: SafeArea(
+        child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: AppColors.textPrimary.withValues(alpha: 0.06),
                 blurRadius: 12,
                 offset: const Offset(0, -4),
               ),
             ],
           ),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppButton.primary(
+              label: widget.isEdit ? 'Simpan Perubahan' : 'Tambah ke Pesanan',
+              leadingIcon:
+                  widget.isEdit ? Icons.check : Icons.add_shopping_cart,
+              size: AppButtonSize.lg,
+              isFullWidth: true,
               onPressed: _confirm,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    widget.isEdit ? Icons.check : Icons.add_shopping_cart,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.isEdit ? 'Simpan Perubahan' : 'Tambah ke Pesanan',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildProductInfoCard({required bool priceLocked}) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      shadow: true,
+      bordered: false,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            child: CachedNetworkImage(
+              imageUrl: widget.product.gambarUrl ??
+                  'https://placehold.co/200x200/png?text=Produk',
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
+              errorWidget: (ctx, url, err) => const ColoredBox(
+                color: AppColors.divider,
+                child: Icon(Icons.broken_image, color: AppColors.textMuted),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md + 2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.product.namaProduk,
+                  style: AppTextStyles.titleMedium.copyWith(fontSize: 15),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'SKU: ${widget.product.sku}',
+                  style: AppTextStyles.caption,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _fmt.format(
+                    _selectedUnit?.hargaJual ?? widget.product.hargaJual,
+                  ),
+                  style: AppTextStyles.titleMedium.copyWith(
+                    fontSize: 13,
+                    color: AppColors.primary,
+                    decoration: (_price <
+                                (_selectedUnit?.hargaJual ??
+                                    widget.product.hargaJual) &&
+                            !priceLocked)
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUnitSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedUnit?.id,
+          isExpanded: true,
+          items: widget.product.units.map((u) {
+            final priceLabel =
+                u.hargaJual != null ? ' - ${_fmt.format(u.hargaJual)}' : '';
+            return DropdownMenuItem<String>(
+              value: u.id,
+              child: Text(
+                '${u.nama}$priceLabel',
+                style: AppTextStyles.bodyMedium,
+              ),
+            );
+          }).toList(),
+          onChanged: (unitId) {
+            final unit =
+                widget.product.units.firstWhere((u) => u.id == unitId);
+            setState(() {
+              _selectedUnit = unit;
+              _price = unit.hargaJual ?? widget.product.hargaJual;
+              _priceController.text = _price.toStringAsFixed(0);
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQtySelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          _QtyButton(
+            icon: Icons.remove,
+            onTap: _decrementQty,
+            enabled: _qty > 1,
+          ),
+          Expanded(
+            child: TextField(
+              controller: _qtyController,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: AppTextStyles.headingMedium.copyWith(fontSize: 20),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              onChanged: _onQtyTextChanged,
+            ),
+          ),
+          Text(
+            _selectedUnit?.nama ?? widget.product.satuan,
+            style: AppTextStyles.bodySmall,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _QtyButton(
+            icon: Icons.add,
+            onTap: _incrementQty,
+            enabled: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceField({required bool priceLocked}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: priceLocked ? AppColors.divider : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: priceLocked
+              ? AppColors.warning.withValues(alpha: 0.4)
+              : AppColors.border,
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Rp',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: priceLocked
+                  ? AppColors.textMuted
+                  : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: TextField(
+              controller: _priceController,
+              enabled: !priceLocked,
+              keyboardType: const TextInputType.numberWithOptions(),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: AppTextStyles.titleLarge.copyWith(
+                fontSize: 18,
+                color:
+                    priceLocked ? AppColors.textMuted : AppColors.textPrimary,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              onChanged: _onPriceChanged,
+            ),
+          ),
+          if (priceLocked)
+            Row(
+              children: [
+                const Icon(
+                  Icons.lock,
+                  size: 13,
+                  color: AppColors.warning,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Promo aktif',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -605,7 +634,7 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Hapus'),
           ),
         ],
@@ -615,10 +644,6 @@ class _ProductOrderPageState extends ConsumerState<ProductOrderPage> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helper widgets
-// ---------------------------------------------------------------------------
-
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
@@ -627,10 +652,9 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: TextStyle(
-        fontSize: 11,
+      style: AppTextStyles.caption.copyWith(
         fontWeight: FontWeight.bold,
-        color: Colors.grey.shade500,
+        color: AppColors.textMuted,
         letterSpacing: 0.8,
       ),
     );
@@ -657,14 +681,14 @@ class _QtyButton extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(
           color: enabled
-              ? AppTheme.primary.withValues(alpha: 0.08)
-              : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(10),
+              ? AppColors.primary.withValues(alpha: 0.08)
+              : AppColors.divider,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd + 2),
         ),
         child: Icon(
           icon,
           size: 20,
-          color: enabled ? AppTheme.primary : Colors.grey.shade400,
+          color: enabled ? AppColors.primary : AppColors.textMuted,
         ),
       ),
     );
@@ -693,17 +717,17 @@ class _SummaryLine extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 13,
-            color: isDiscount ? AppTheme.success : Colors.grey.shade600,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: isDiscount ? AppColors.success : AppColors.textSecondary,
           ),
         ),
         Text(
           value,
-          style: TextStyle(
-            fontSize: bold ? 16 : 13,
+          style: (bold ? AppTextStyles.titleLarge : AppTextStyles.bodySmall)
+              .copyWith(
             fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-            color: color ?? (isDiscount ? AppTheme.success : Colors.black87),
+            color: color ??
+                (isDiscount ? AppColors.success : AppColors.textPrimary),
           ),
         ),
       ],

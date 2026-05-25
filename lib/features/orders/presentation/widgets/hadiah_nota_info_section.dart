@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class HadiahNotaInfoSection extends StatelessWidget {
   final List hadiahNotaPromos;
@@ -16,9 +16,9 @@ class HadiahNotaInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.teal.shade100),
         boxShadow: [
@@ -139,7 +139,7 @@ class HadiahNotaInfoSection extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: harga > 0
                                         ? Colors.teal.shade400
-                                        : AppTheme.success,
+                                        : AppColors.success,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -148,7 +148,7 @@ class HadiahNotaInfoSection extends StatelessWidget {
                                         : "Gratis",
                                     style: const TextStyle(
                                       fontSize: 11,
-                                      color: Colors.white,
+                                      color: AppColors.surface,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

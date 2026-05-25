@@ -31,6 +31,16 @@ final scheduleSearchProvider = NotifierProvider<ScheduleSearchNotifier, String>(
   ScheduleSearchNotifier.new,
 );
 
+bool _isCheckInOnLocalDate(String? checkIn, String tanggal) {
+  if (checkIn == null) return false;
+  final dt = DateTime.tryParse(checkIn);
+  if (dt == null) return false;
+  final local = dt.toLocal();
+  final localDate =
+      '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
+  return localDate == tanggal;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // STREAM PROVIDERS — Reactive SSOT (Preferred)
 // These return combined schedule+pelanggan data as List<Map<String, dynamic>>
@@ -96,9 +106,7 @@ final scheduleStreamProvider =
 
             final visits = visitsMap[item.pelangganId] ?? [];
             final matchingVisit = visits.where((v) {
-              final checkIn = v.waktuCheckIn;
-              if (checkIn == null) return false;
-              return checkIn.startsWith(tanggal);
+              return _isCheckInOnLocalDate(v.waktuCheckIn, tanggal);
             }).firstOrNull;
 
             final orders = ordersMap[item.pelangganId] ?? [];
@@ -123,9 +131,7 @@ final scheduleStreamProvider =
           // ── Part B: Merge unplanned visits (scheduleId == null) ───────────
           final unplannedVisits = lastVisitItems!.where((v) {
             if (v.scheduleId != null) return false;
-            final checkIn = v.waktuCheckIn;
-            if (checkIn == null) return false;
-            if (!checkIn.startsWith(tanggal)) return false;
+            if (!_isCheckInOnLocalDate(v.waktuCheckIn, tanggal)) return false;
             final pelId = v.pelangganId?.toString() ?? '';
             if (scheduledPelangganIds.contains(pelId)) return false;
             return true;
@@ -336,9 +342,7 @@ class ScheduleController extends AsyncNotifier<List<dynamic>> {
       // Enrich with visit ID and order count (same logic as stream provider)
       final visits = await db.getVisitsByPelanggan(item.pelangganId);
       final matchingVisit = visits.where((v) {
-        final checkIn = v.waktuCheckIn;
-        if (checkIn == null) return false;
-        return checkIn.startsWith(item.tanggal);
+        return _isCheckInOnLocalDate(v.waktuCheckIn, item.tanggal);
       }).firstOrNull;
 
       final orders = await db.getOrdersByPelanggan(item.pelangganId);
@@ -364,9 +368,7 @@ class ScheduleController extends AsyncNotifier<List<dynamic>> {
     final todayVisits = await db.getTodayVisits();
     final unplannedVisits = todayVisits.where((v) {
       if (v.scheduleId != null) return false;
-      final checkIn = v.waktuCheckIn;
-      if (checkIn == null) return false;
-      if (!checkIn.startsWith(dateStr)) return false;
+      if (!_isCheckInOnLocalDate(v.waktuCheckIn, dateStr)) return false;
       final pelId = v.pelangganId?.toString() ?? '';
       if (scheduledPelangganIds.contains(pelId)) return false;
       return true;

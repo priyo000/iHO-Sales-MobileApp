@@ -112,7 +112,9 @@ class ConnectivityService {
       });
     });
 
-    // Periodic reachability check — runs both when online and offline
+    // Periodic check — recovery only.
+    // Network-layer (subscription) adalah authoritative offline signal.
+    // Reachability noisy (DNS transient fail) → tidak boleh flip online → offline sendiri.
     _periodicTimer?.cancel();
     _periodicTimer = Timer.periodic(const Duration(seconds: 60), (_) async {
       final results = await _connectivity.checkConnectivity();
@@ -123,15 +125,13 @@ class ConnectivityService {
         }
         return;
       }
-      final reachable = await _verifyReachability();
-      if (reachable && !_isOnline) {
-        _isOnline = true;
-        _controller.add(true);
-        log('[Connectivity] Periodic check: kembali ONLINE');
-      } else if (!reachable && _isOnline) {
-        _isOnline = false;
-        _controller.add(false);
-        log('[Connectivity] Periodic check: server unreachable → OFFLINE');
+      if (!_isOnline) {
+        final reachable = await _verifyReachability();
+        if (reachable) {
+          _isOnline = true;
+          _controller.add(true);
+          log('[Connectivity] Periodic check: kembali ONLINE');
+        }
       }
     });
   }
@@ -168,19 +168,25 @@ class ConnectivityService {
 
   /// Cek koneksi aktual sebelum melakukan operasi.
   /// Melakukan dua-lapis cek: network + server reachability.
+  /// Emit ke stream saat state berubah agar UI tetap konsisten.
   Future<bool> checkNow() async {
+    final previous = _isOnline;
+    bool current;
     try {
       final results = await _connectivity.checkConnectivity();
       if (!_hasConnection(results)) {
-        _isOnline = false;
-        return false;
+        current = false;
+      } else {
+        current = await _verifyReachability();
       }
-      _isOnline = await _verifyReachability();
-      return _isOnline;
     } catch (_) {
-      _isOnline = false;
-      return false;
+      current = false;
     }
+    _isOnline = current;
+    if (current != previous) {
+      _controller.add(current);
+    }
+    return current;
   }
 
   void dispose() {

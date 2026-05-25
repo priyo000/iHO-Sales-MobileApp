@@ -37,7 +37,7 @@ class CustomDateRangeNotifier extends Notifier<DateTimeRange?> {
 class ReportsController extends Notifier<ReportsControllerState> {
   @override
   ReportsControllerState build() {
-    state = ReportsControllerState(selectedRange: 'Minggu Ini');
+    state = ReportsControllerState();
     _loadReport('Minggu Ini');
     return state;
   }
@@ -78,7 +78,7 @@ class ReportsController extends Notifier<ReportsControllerState> {
         return;
       }
 
-      final stats = data != null ? _parseStats(data) : ReportStats();
+      final stats = data != null ? _parseStats(data) : const ReportStats();
       final dateRange = data?['date_range'] as String?;
 
       state = state.copyWith(
@@ -99,7 +99,7 @@ class ReportsController extends Notifier<ReportsControllerState> {
       // On error: show empty stats with "Tidak tersedia"
       state = state.copyWith(
         selectedRange: period,
-        stats: ReportStats(),
+        stats: const ReportStats(),
         isLoading: false,
         dateRange: 'Tidak tersedia',
       );
@@ -111,7 +111,7 @@ class ReportsController extends Notifier<ReportsControllerState> {
 
     try {
       final data = await repo.getCustomRangeReport(startDate, endDate);
-      final stats = data != null ? _parseStats(data) : ReportStats();
+      final stats = data != null ? _parseStats(data) : const ReportStats();
       final dateRange = data?['date_range'] as String?;
 
       state = state.copyWith(
@@ -124,7 +124,7 @@ class ReportsController extends Notifier<ReportsControllerState> {
       debugPrint('[ReportsController] _loadCustomRange error: $e\n$st');
       state = state.copyWith(
         selectedRange: 'Kustom',
-        stats: ReportStats(),
+        stats: const ReportStats(),
         isLoading: false,
         dateRange: 'Tidak tersedia',
       );
@@ -167,7 +167,7 @@ class ReportsController extends Notifier<ReportsControllerState> {
         if (cleaned.contains(',') && cleaned.contains('.')) {
           final parts = cleaned.split('.');
           final frac = parts.last.replaceFirst(',', '.');
-          cleaned = '${parts.take(parts.length - 1).join('')}$frac';
+          cleaned = '${parts.take(parts.length - 1).join()}$frac';
         } else if (cleaned.contains(',')) {
           cleaned = cleaned.replaceFirst(',', '.');
         }

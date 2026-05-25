@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class OrderSummarySection extends StatelessWidget {
   final double subtotal;
@@ -23,7 +23,7 @@ class OrderSummarySection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
@@ -48,9 +48,9 @@ class OrderSummarySection extends StatelessWidget {
             _SummaryLine(
               label: "Total Diskon",
               value: "- ${fmt.format(diskonTotal)}",
-              valueColor: AppTheme.success,
+              valueColor: AppColors.success,
               icon: Icons.local_offer,
-              iconColor: AppTheme.success,
+              iconColor: AppColors.success,
             ),
           ],
           const Padding(
@@ -69,7 +69,7 @@ class OrderSummarySection extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.primary,
+                  color: AppColors.primary,
                 ),
               ),
             ],
@@ -113,7 +113,7 @@ class _SummaryLine extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: valueColor ?? Colors.black87,
+            color: valueColor ?? AppColors.textPrimary,
           ),
         ),
       ],

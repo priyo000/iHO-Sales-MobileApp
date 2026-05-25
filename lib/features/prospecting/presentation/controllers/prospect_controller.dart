@@ -9,7 +9,6 @@ import 'package:sales_tracker_mobile/core/auth/user_provider.dart';
 
 class ProspectController
     extends Notifier<PaginatedState<Map<String, dynamic>>> {
-  static const int _perPage = 20;
   String _search = '';
   StreamSubscription? _driftSub;
 
@@ -79,7 +78,6 @@ class ProspectController
             search: _search,
             createdById: employeeId,
             page: page,
-            perPage: _perPage,
           );
       final parsed = parsePaginatedResponse(response);
 

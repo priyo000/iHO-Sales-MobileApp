@@ -174,7 +174,7 @@ class CustomerRepository {
 
   Future<Set<String>> _buildPendingCustomerIds() async {
     final pendingIds = <String>{};
-    final pendingTypes = const [
+    const pendingTypes = [
       'update_pelanggan',
       'update_customer_photo',
       'create_pelanggan',

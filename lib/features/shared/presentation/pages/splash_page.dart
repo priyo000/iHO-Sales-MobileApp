@@ -7,7 +7,9 @@ import 'package:sales_tracker_mobile/core/auth/user_provider.dart';
 import 'package:sales_tracker_mobile/core/permission/permission_service.dart';
 import 'package:sales_tracker_mobile/core/services/token_storage.dart';
 import 'package:sales_tracker_mobile/core/services/preload_service.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -80,35 +82,37 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // App Logo or Icon
-            ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Image.asset(
-                'assets/images/logo-app.png',
-                width: 120,
-                height: 120,
+      backgroundColor: AppColors.primary,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
+                child: Image.asset(
+                  'assets/images/logo-app.png',
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Sales Tracker',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Sales Tracker',
+                style: AppTextStyles.headingLarge.copyWith(
+                  color: AppColors.textOnPrimary,
+                  letterSpacing: 2,
+                ),
               ),
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.xxxl),
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.textOnPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

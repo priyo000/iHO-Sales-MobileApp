@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class AppNotifications {
   static void showSnackBar(
@@ -36,7 +36,7 @@ class AppNotifications {
             ),
           ],
         ),
-        backgroundColor: isError ? AppTheme.error : AppTheme.success,
+        backgroundColor: isError ? AppColors.error : AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),

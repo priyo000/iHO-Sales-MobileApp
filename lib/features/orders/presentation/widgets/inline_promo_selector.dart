@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 import '../../data/models/cart_item_model.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/promo_model.dart';
@@ -70,9 +70,9 @@ class InlinePromoSelector extends ConsumerWidget {
           );
         }
 
-        return Container(
+        return DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade200),
           ),
@@ -84,7 +84,6 @@ class InlinePromoSelector extends ConsumerWidget {
                 title: 'Tanpa Promo',
                 subtitle: null,
                 detail: null,
-                enabled: true,
               ),
               ...options.map((opt) {
                 final isSelected = selected?.idCampaign == opt.idCampaign &&
@@ -152,7 +151,7 @@ class PromoTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppTheme.primary.withValues(alpha: 0.04)
+              ? AppColors.primary.withValues(alpha: 0.04)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -169,7 +168,7 @@ class PromoTile extends StatelessWidget {
                   color: !enabled
                       ? Colors.grey.shade300
                       : isSelected
-                          ? AppTheme.primary
+                          ? AppColors.primary
                           : Colors.grey.shade400,
                   width: 2,
                 ),
@@ -181,7 +180,7 @@ class PromoTile extends StatelessWidget {
                         height: 8,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppTheme.primary,
+                          color: AppColors.primary,
                         ),
                       ),
                     )
@@ -203,8 +202,8 @@ class PromoTile extends StatelessWidget {
                             color: !enabled
                                 ? Colors.grey.shade400
                                 : isSelected
-                                    ? AppTheme.primary
-                                    : Colors.black87,
+                                    ? AppColors.primary
+                                    : AppColors.textPrimary,
                           ),
                         ),
                       ),
@@ -218,7 +217,7 @@ class PromoTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         color:
-                            enabled ? AppTheme.success : Colors.grey.shade400,
+                            enabled ? AppColors.success : Colors.grey.shade400,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -425,14 +424,14 @@ class _AturanHargaDetail extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppTheme.success,
+                color: AppColors.success,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 persenStr,
                 style: const TextStyle(
                   fontSize: 10,
-                  color: Colors.white,
+                  color: AppColors.surface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -470,7 +469,7 @@ class _GrosirTiersDetail extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: isActive
-                  ? AppTheme.success.withValues(alpha: 0.3)
+                  ? AppColors.success.withValues(alpha: 0.3)
                   : Colors.grey.shade200,
             ),
           ),
@@ -483,7 +482,7 @@ class _GrosirTiersDetail extends StatelessWidget {
                   fontWeight:
                       isActive ? FontWeight.bold : FontWeight.normal,
                   color:
-                      isActive ? AppTheme.success : Colors.grey.shade600,
+                      isActive ? AppColors.success : Colors.grey.shade600,
                 ),
               ),
               const Spacer(),
@@ -497,12 +496,12 @@ class _GrosirTiersDetail extends StatelessWidget {
                   margin: const EdgeInsets.only(right: 6),
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
-                    color: isActive ? AppTheme.success : Colors.grey.shade400,
+                    color: isActive ? AppColors.success : Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     persenStr,
-                    style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 9, color: AppColors.surface, fontWeight: FontWeight.bold),
                   ),
                 );
               }),
@@ -511,7 +510,7 @@ class _GrosirTiersDetail extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  color: isActive ? Colors.black87 : Colors.grey.shade500,
+                  color: isActive ? AppColors.textPrimary : Colors.grey.shade500,
                 ),
               ),
             ],
@@ -551,14 +550,14 @@ class _HadiahItemDetail extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: item.hargaTebus > 0 ? Colors.orange.shade400 : AppTheme.success,
+              color: item.hargaTebus > 0 ? Colors.orange.shade400 : AppColors.success,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               hargaLabel,
               style: const TextStyle(
                 fontSize: 11,
-                color: Colors.white,
+                color: AppColors.surface,
                 fontWeight: FontWeight.bold,
               ),
             ),

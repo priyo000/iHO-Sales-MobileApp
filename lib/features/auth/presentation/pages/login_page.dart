@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:sales_tracker_mobile/core/auth/auth_controller.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
 import 'package:sales_tracker_mobile/core/utils/app_notifications.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_text_field.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -13,7 +18,6 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  bool _isObscure = true;
   bool _isSubmitting = false;
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
@@ -33,21 +37,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (!_formKey.currentState!.validate()) return;
 
       await ref.read(authProvider.notifier).login(
-          _usernameController.text.trim(),
-          _passwordController.text,
+            _usernameController.text.trim(),
+            _passwordController.text,
+          );
+
+      if (!mounted) return;
+
+      if (ref.read(authProvider).hasError) {
+        AppNotifications.showSnackBar(
+          context,
+          message: '${ref.read(authProvider).error}',
+          isError: true,
         );
-
-    if (!mounted) return;
-
-    if (ref.read(authProvider).hasError) {
-      AppNotifications.showSnackBar(
-        context,
-        message: '${ref.read(authProvider).error}',
-        isError: true,
-      );
-    } else {
-      context.go('/home');
-    }
+      } else {
+        context.go('/home');
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -59,10 +63,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isLoading = authState.isLoading;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).cardColor,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
@@ -70,52 +74,43 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-
-                // Logo
                 Center(
                   child: Container(
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                     ),
                     child: const Icon(
                       Icons.bar_chart,
                       size: 40,
-                      color: AppTheme.primary,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
+                const SizedBox(height: AppSpacing.xl),
+                Text(
                   'Selamat Datang',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.headingLarge,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   'Silakan masuk ke akun Anda',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 48),
-
-                // Username Field
-                TextFormField(
-                  controller: _usernameController,
-                  textInputAction: TextInputAction.next,
-                  enabled: !isLoading,
-                  decoration: InputDecoration(
-                    labelText: 'Username',
-                    hintText: 'Ketikan username Anda',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).scaffoldBackgroundColor,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                   ),
+                ),
+                const SizedBox(height: AppSpacing.xxxl),
+                AppTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  hint: 'Ketikan username Anda',
+                  prefixIcon: Icons.person_outline,
+                  enabled: !isLoading,
+                  action: TextInputAction.next,
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
                       return 'Username tidak boleh kosong';
@@ -123,32 +118,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
-
-                // Password Field
-                TextFormField(
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
                   controller: _passwordController,
-                  obscureText: _isObscure,
-                  textInputAction: TextInputAction.done,
+                  label: 'Password',
+                  hint: 'Ketikan password Anda',
+                  type: AppTextFieldType.password,
                   enabled: !isLoading,
+                  action: TextInputAction.done,
                   onFieldSubmitted: (_) => _handleLogin(),
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Ketikan password Anda',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isObscure ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () =>
-                          setState(() => _isObscure = !_isObscure),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).scaffoldBackgroundColor,
-                  ),
                   validator: (v) {
                     if (v == null || v.isEmpty) {
                       return 'Password tidak boleh kosong';
@@ -156,47 +134,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 32),
-
-                // Login Button
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          AppTheme.primary.withValues(alpha: 0.6),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
+                const SizedBox(height: AppSpacing.xxl),
+                AppButton.primary(
+                  label: 'Login',
+                  size: AppButtonSize.lg,
+                  isFullWidth: true,
+                  isLoading: isLoading,
+                  onPressed: isLoading ? null : _handleLogin,
                 ),
-
                 const Spacer(),
-                const Center(
+                Center(
                   child: Text(
                     'Version 1.0.0',
-                    style: TextStyle(color: Colors.grey),
+                    style: AppTextStyles.caption,
                   ),
                 ),
               ],

@@ -18,7 +18,7 @@ enum OrderStatus {
   }
 
   String get label => switch (this) {
-    OrderStatus.pending => 'Pending',
+    OrderStatus.pending => 'Tertunda',
     OrderStatus.processing => 'Diproses',
     OrderStatus.success => 'Berhasil',
     OrderStatus.cancelled => 'Dibatalkan',

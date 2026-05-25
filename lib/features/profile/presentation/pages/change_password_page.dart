@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_card.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_text_field.dart';
+
 import '../controllers/change_password_controller.dart';
 
 class ChangePasswordPage extends ConsumerStatefulWidget {
@@ -17,10 +25,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
-  bool _obscureCurrent = true;
-  bool _obscureNew = true;
-  bool _obscureConfirm = true;
 
   @override
   void dispose() {
@@ -50,7 +54,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Password berhasil diperbarui!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         context.pop();
@@ -64,47 +68,49 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(changePasswordControllerProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Ganti Password'), centerTitle: true),
+    return AppScaffold(
+      appBar: AppBar(title: const Text('Ganti Password')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 16),
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: AppSpacing.xs,
+                  bottom: AppSpacing.lg,
+                ),
                 child: Text(
                   'Pastikan password baru Anda kuat dan sulit ditebak untuk keamanan akun.',
-                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                  style: AppTextStyles.bodySmall,
                 ),
               ),
-
-              // Error Banner
               if (state.errorMessage != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red[200]!),
+                    color: AppColors.error.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                    border: Border.all(
+                      color: AppColors.error.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.error_outline,
-                        color: Colors.red[700],
+                        color: AppColors.error,
                         size: 18,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
                           state.errorMessage!,
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontSize: 13,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.error,
                           ),
                         ),
                       ),
@@ -112,52 +118,39 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                   ),
                 ),
               ],
-
-              // Form Card
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
+              AppCard(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                shadow: true,
+                bordered: false,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
                 child: Column(
                   children: [
-                    _buildPasswordField(
-                      label: 'Password Saat Ini',
+                    AppTextField(
                       controller: _currentPasswordController,
-                      obscure: _obscureCurrent,
-                      onToggle: () =>
-                          setState(() => _obscureCurrent = !_obscureCurrent),
+                      label: 'Password Saat Ini',
+                      hint: 'Masukkan password saat ini',
+                      type: AppTextFieldType.password,
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Wajib diisi' : null,
                     ),
-                    const SizedBox(height: 20),
-                    _buildPasswordField(
-                      label: 'Password Baru',
+                    const SizedBox(height: AppSpacing.lg),
+                    AppTextField(
                       controller: _newPasswordController,
-                      obscure: _obscureNew,
-                      onToggle: () =>
-                          setState(() => _obscureNew = !_obscureNew),
+                      label: 'Password Baru',
+                      hint: 'Masukkan password baru',
+                      type: AppTextFieldType.password,
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Wajib diisi';
                         if (v.length < 6) return 'Minimal 6 karakter';
                         return null;
                       },
                     ),
-                    const SizedBox(height: 20),
-                    _buildPasswordField(
-                      label: 'Konfirmasi Password Baru',
+                    const SizedBox(height: AppSpacing.lg),
+                    AppTextField(
                       controller: _confirmPasswordController,
-                      obscure: _obscureConfirm,
-                      onToggle: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
+                      label: 'Konfirmasi Password Baru',
+                      hint: 'Ulangi password baru',
+                      type: AppTextFieldType.password,
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Wajib diisi';
                         if (v != _newPasswordController.text) {
@@ -169,107 +162,18 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                   ],
                 ),
               ),
-
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: state.isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppTheme.primary.withValues(
-                      alpha: 0.6,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: state.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Simpan Perubahan',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                ),
+              const SizedBox(height: AppSpacing.xxl),
+              AppButton.primary(
+                label: 'Simpan Perubahan',
+                size: AppButtonSize.lg,
+                isFullWidth: true,
+                isLoading: state.isLoading,
+                onPressed: state.isLoading ? null : _submit,
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPasswordField({
-    required String label,
-    required TextEditingController controller,
-    required bool obscure,
-    required VoidCallback onToggle,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: obscure,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: 'Masukkan $label',
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-            filled: true,
-            fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[200]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[200]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-            suffixIcon: IconButton(
-              icon: Icon(
-                obscure
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                color: Colors.grey,
-                size: 20,
-              ),
-              onPressed: onToggle,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

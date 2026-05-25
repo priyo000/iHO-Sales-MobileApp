@@ -5,17 +5,20 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sales_tracker_mobile/core/services/location_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
-import '../../../../core/theme/app_theme.dart';
-import '../controllers/customer_controller.dart';
+import 'package:sales_tracker_mobile/core/services/location_service.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_card.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_text_field.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Nominatim Service — Reverse & Forward Geocoding (OpenStreetMap)
-// ─────────────────────────────────────────────────────────────────────────────
+import '../controllers/customer_controller.dart';
 
 class NominatimService {
   static const String _baseUrl = 'https://nominatim.openstreetmap.org';
@@ -24,7 +27,6 @@ class NominatimService {
     'Accept-Language': 'id,en',
   };
 
-  /// Reverse geocoding: koordinat → data alamat
   static Future<Map<String, dynamic>?> reverseGeocode(
     double lat,
     double lon,
@@ -46,7 +48,6 @@ class NominatimService {
     return null;
   }
 
-  /// Forward geocoding: query teks → daftar hasil
   static Future<List<Map<String, dynamic>>> search(String query) async {
     if (query.trim().isEmpty) return [];
     try {
@@ -68,12 +69,10 @@ class NominatimService {
     return [];
   }
 
-  /// Ekstrak field alamat dari response Nominatim
   static Map<String, String> extractAddress(Map<String, dynamic> data) {
     final addr = (data['address'] as Map?)?.cast<String, dynamic>() ?? {};
     final displayName = data['display_name']?.toString() ?? '';
 
-    // Susun alamat lengkap dari komponen Nominatim
     final components = <String>[];
     for (final key in [
       'road',
@@ -89,13 +88,11 @@ class NominatimService {
         ? components.join(', ')
         : displayName.split(',').take(3).join(',').trim();
 
-    final kecamatan =
-        addr['subdistrict']?.toString() ??
+    final kecamatan = addr['subdistrict']?.toString() ??
         addr['suburb']?.toString() ??
         addr['county']?.toString() ??
         '';
-    final kota =
-        addr['city']?.toString() ??
+    final kota = addr['city']?.toString() ??
         addr['town']?.toString() ??
         addr['regency']?.toString() ??
         addr['county']?.toString() ??
@@ -110,10 +107,6 @@ class NominatimService {
     };
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CustomerTaggingPage
-// ─────────────────────────────────────────────────────────────────────────────
 
 class CustomerTaggingPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> customer;
@@ -132,14 +125,12 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
   bool _isGeocoding = false;
   bool _isSaving = false;
 
-  // Search
   final _searchController = TextEditingController();
   List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
   Timer? _searchDebounce;
   bool _showSearchResults = false;
 
-  // Form
   final _alamatController = TextEditingController();
   final _kotaController = TextEditingController();
   final _kecamatanController = TextEditingController();
@@ -150,7 +141,6 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
     super.initState();
     _mapController = MapController();
 
-    // Inisialisasi koordinat & form dari data pelanggan
     final lat = double.tryParse(widget.customer['latitude']?.toString() ?? '');
     final lng = double.tryParse(widget.customer['longitude']?.toString() ?? '');
     if (lat != null && lng != null) {
@@ -173,8 +163,6 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
     _searchDebounce?.cancel();
     super.dispose();
   }
-
-  // ── Reverse Geocoding ────────────────────────────────────────────────────
 
   Future<void> _reverseGeocode(LatLng latlng) async {
     setState(() => _isGeocoding = true);
@@ -199,14 +187,12 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
             _provinsiController.text = extracted['provinsi']!;
           }
         });
-        _showGeocodingSnack('📍 Alamat terdeteksi dari lokasi peta');
+        _showInfoSnack('Alamat terdeteksi dari lokasi peta');
       }
     } finally {
       if (mounted) setState(() => _isGeocoding = false);
     }
   }
-
-  // ── Forward Search ───────────────────────────────────────────────────────
 
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
@@ -241,8 +227,7 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
     setState(() {
       _selectedLocation = newLoc;
       _showSearchResults = false;
-      _searchController.text =
-          result['display_name']
+      _searchController.text = result['display_name']
               ?.toString()
               .split(',')
               .take(2)
@@ -267,39 +252,29 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
     FocusScope.of(context).unfocus();
   }
 
-  // ── GPS ──────────────────────────────────────────────────────────────────
-
   Future<void> _useCurrentLocation() async {
     setState(() => _isLoading = true);
     try {
       final position = await LocationService.getCurrentWithPermission();
       final newLoc = LatLng(position.latitude, position.longitude);
-
       setState(() => _selectedLocation = newLoc);
       _mapController.move(newLoc, 17);
-
-      // Auto reverse geocode after GPS
       await _reverseGeocode(newLoc);
     } catch (e) {
-      if (mounted) {
-        _showErrorSnack('Gagal mengambil lokasi GPS: $e');
-      }
+      if (mounted) _showErrorSnack('Gagal mengambil lokasi GPS: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // ── Map Tap ──────────────────────────────────────────────────────────────
-
   Future<void> _onMapTap(TapPosition _, LatLng latlng) async {
-    setState(() => _selectedLocation = latlng);
+    setState(() {
+      _selectedLocation = latlng;
+      _showSearchResults = false;
+    });
     FocusScope.of(context).unfocus();
-    setState(() => _showSearchResults = false);
-    // Auto reverse geocode on map tap
     await _reverseGeocode(latlng);
   }
-
-  // ── Save ─────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
     if (_selectedLocation == null) {
@@ -309,17 +284,16 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
 
     setState(() => _isSaving = true);
     try {
-      final result = await ref
-          .read(customerControllerProvider.notifier)
-          .updateCustomer(
-            id: widget.customer['id'].toString(),
-            latitude: _selectedLocation!.latitude,
-            longitude: _selectedLocation!.longitude,
-            alamatUsaha: _alamatController.text.trim(),
-            kotaUsaha: _kotaController.text.trim(),
-            kecamatanUsaha: _kecamatanController.text.trim(),
-            provinsiUsaha: _provinsiController.text.trim(),
-          );
+      final result =
+          await ref.read(customerControllerProvider.notifier).updateCustomer(
+                id: widget.customer['id'].toString(),
+                latitude: _selectedLocation!.latitude,
+                longitude: _selectedLocation!.longitude,
+                alamatUsaha: _alamatController.text.trim(),
+                kotaUsaha: _kotaController.text.trim(),
+                kecamatanUsaha: _kecamatanController.text.trim(),
+                provinsiUsaha: _provinsiController.text.trim(),
+              );
 
       if (!mounted) return;
 
@@ -328,10 +302,11 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
         SnackBar(
           content: Text(
             isOffline
-                ? '📦 Tersimpan lokal, akan sync saat online'
-                : '✅ Lokasi & Alamat berhasil diperbarui!',
+                ? 'Tersimpan lokal, akan sync saat online'
+                : 'Lokasi & Alamat berhasil diperbarui',
           ),
-          backgroundColor: isOffline ? Colors.orange[700] : AppTheme.success,
+          backgroundColor:
+              isOffline ? AppColors.warning : AppColors.success,
         ),
       );
       context.pop();
@@ -342,9 +317,7 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
     }
   }
 
-  // ── Snack Helpers ────────────────────────────────────────────────────────
-
-  void _showGeocodingSnack(String msg) {
+  void _showInfoSnack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -352,8 +325,7 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
         SnackBar(
           content: Text(msg),
           duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.primary,
+          backgroundColor: AppColors.primary,
         ),
       );
   }
@@ -361,48 +333,41 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
   void _showErrorSnack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppTheme.error),
+      SnackBar(content: Text(msg), backgroundColor: AppColors.error),
     );
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(
-        title: const Text(
-          'Tagging Lokasi',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Tagging Lokasi'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => context.pop(),
         ),
       ),
       body: Column(
         children: [
-          // ── Search Bar ────────────────────────────────────────────────
           _buildSearchBar(),
-
-          // ── Search Results Dropdown ───────────────────────────────────
           if (_showSearchResults) _buildSearchResults(),
-
-          // ── Map ───────────────────────────────────────────────────────
           Expanded(flex: 5, child: _buildMap()),
-
-          // ── Form ──────────────────────────────────────────────────────
           Expanded(flex: 5, child: _buildForm()),
         ],
       ),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomBar: _buildBottomBar(),
     );
   }
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      color: AppColors.surface,
       child: TextField(
         controller: _searchController,
         onChanged: _onSearchChanged,
@@ -415,7 +380,7 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
           hintText: 'Cari alamat atau nama tempat...',
           prefixIcon: _isSearching
               ? const Padding(
-                  padding: EdgeInsets.all(12),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   child: SizedBox(
                     width: 16,
                     height: 16,
@@ -435,16 +400,6 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
                   },
                 )
               : null,
-          filled: true,
-          fillColor: Colors.grey[100],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 10,
-          ),
         ),
       ),
     );
@@ -453,11 +408,12 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
   Widget _buildSearchResults() {
     return Container(
       constraints: const BoxConstraints(maxHeight: 220),
-      color: Colors.white,
+      color: AppColors.surface,
       child: ListView.separated(
         shrinkWrap: true,
         itemCount: _searchResults.length,
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 16),
+        separatorBuilder: (_, _) =>
+            const Divider(height: 1, indent: AppSpacing.lg),
         itemBuilder: (context, i) {
           final item = _searchResults[i];
           final name = item['display_name']?.toString() ?? '';
@@ -468,17 +424,17 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
             dense: true,
             leading: const Icon(
               Icons.location_on_outlined,
-              color: AppTheme.primary,
+              color: AppColors.primary,
               size: 20,
             ),
             title: Text(
               primary,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: AppTextStyles.titleMedium.copyWith(fontSize: 13),
             ),
             subtitle: secondary.isNotEmpty
                 ? Text(
                     secondary,
-                    style: const TextStyle(fontSize: 11),
+                    style: AppTextStyles.caption,
                     maxLines: 2,
                   )
                 : null,
@@ -512,65 +468,70 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
                     point: _selectedLocation!,
                     width: 50,
                     height: 60,
-                    child: const Column(
-                      children: [
-                        Icon(Icons.location_on, color: Colors.red, size: 42),
-                        SizedBox(height: 2),
-                      ],
+                    child: const Icon(
+                      Icons.location_on,
+                      color: AppColors.error,
+                      size: 42,
                     ),
                   ),
                 ],
               ),
           ],
         ),
-
-        // Geocoding loading indicator
         if (_isGeocoding)
           Positioned(
-            top: 12,
-            left: 16,
-            right: 16,
+            top: AppSpacing.md,
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
             child: Material(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               elevation: 3,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm + 2,
+                ),
                 child: Row(
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: AppSpacing.sm + 2),
                     Text(
                       'Mendeteksi alamat dari lokasi...',
-                      style: TextStyle(fontSize: 12),
+                      style: AppTextStyles.bodySmall,
                     ),
                   ],
                 ),
               ),
             ),
           ),
-
-        // Hint label bila belum ada pin
         if (_selectedLocation == null)
-          const Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
+          Positioned(
+            top: AppSpacing.lg,
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
             child: IgnorePointer(
               child: Card(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md + 2,
+                    vertical: AppSpacing.sm + 2,
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.touch_app, size: 18, color: AppTheme.primary),
-                      SizedBox(width: 8),
+                      const Icon(
+                        Icons.touch_app,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
                           'Ketuk peta atau gunakan GPS untuk menentukan lokasi toko',
-                          style: TextStyle(fontSize: 12),
+                          style: AppTextStyles.bodySmall,
                         ),
                       ),
                     ],
@@ -579,15 +540,13 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
               ),
             ),
           ),
-
-        // GPS Button
         Positioned(
-          right: 12,
-          bottom: 12,
+          right: AppSpacing.md,
+          bottom: AppSpacing.md,
           child: FloatingActionButton.small(
             heroTag: 'gps_btn',
             onPressed: _isLoading ? null : _useCurrentLocation,
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.surface,
             tooltip: 'Gunakan Lokasi Saya',
             child: _isLoading
                 ? const SizedBox(
@@ -595,27 +554,27 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.my_location, color: AppTheme.primary),
+                : const Icon(Icons.my_location, color: AppColors.primary),
           ),
         ),
-
-        // Koordinat badge
         if (_selectedLocation != null)
           Positioned(
-            left: 12,
-            bottom: 12,
+            left: AppSpacing.md,
+            bottom: AppSpacing.md,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm + 2,
+                vertical: 6,
+              ),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.65),
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.textPrimary.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               ),
               child: Text(
                 '${_selectedLocation!.latitude.toStringAsFixed(6)}, '
                 '${_selectedLocation!.longitude.toStringAsFixed(6)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.surface,
                   fontFamily: 'monospace',
                 ),
               ),
@@ -626,92 +585,99 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
   }
 
   Widget _buildForm() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, -4),
-          ),
-        ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      shadow: true,
+      bordered: false,
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(AppSpacing.radiusXl),
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.xxxl,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
                 const Icon(
                   Icons.edit_location_alt,
-                  color: AppTheme.primary,
+                  color: AppColors.primary,
                   size: 18,
                 ),
-                const SizedBox(width: 8),
-                const Text(
+                const SizedBox(width: AppSpacing.sm),
+                Text(
                   'Detail Alamat Usaha',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.headingSmall.copyWith(
+                    color: AppColors.primary,
+                  ),
                 ),
                 const Spacer(),
                 if (_isGeocoding)
-                  const Row(
+                  Row(
                     children: [
-                      SizedBox(
+                      const SizedBox(
                         width: 10,
                         height: 10,
                         child: CircularProgressIndicator(strokeWidth: 1.5),
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Text(
                         'Mendeteksi...',
-                        style: TextStyle(fontSize: 10, color: Colors.grey),
+                        style: AppTextStyles.caption,
                       ),
                     ],
                   )
                 else
                   Text(
                     'Otomatis dari peta',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                    style: AppTextStyles.caption,
                   ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            _buildTextField(
-              label: 'Alamat Lengkap',
-              controller: _alamatController,
-              maxLines: 2,
-              icon: Icons.home_outlined,
+            Container(
+              margin: const EdgeInsets.only(top: AppSpacing.xs),
+              height: 2,
+              width: 40,
+              color: AppColors.primary,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              controller: _alamatController,
+              label: 'Alamat Lengkap',
+              type: AppTextFieldType.multiline,
+              maxLines: 2,
+              prefixIcon: Icons.home_outlined,
+            ),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
                 Expanded(
-                  child: _buildTextField(
-                    label: 'Kecamatan',
+                  child: AppTextField(
                     controller: _kecamatanController,
-                    icon: Icons.map_outlined,
+                    label: 'Kecamatan',
+                    prefixIcon: Icons.map_outlined,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: _buildTextField(
-                    label: 'Kota/Kabupaten',
+                  child: AppTextField(
                     controller: _kotaController,
-                    icon: Icons.location_city_outlined,
+                    label: 'Kota/Kabupaten',
+                    prefixIcon: Icons.location_city_outlined,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            _buildTextField(
-              label: 'Provinsi',
+            const SizedBox(height: AppSpacing.lg),
+            AppTextField(
               controller: _provinsiController,
-              icon: Icons.flag_outlined,
+              label: 'Provinsi',
+              prefixIcon: Icons.flag_outlined,
             ),
           ],
         ),
@@ -719,71 +685,24 @@ class _CustomerTaggingPageState extends ConsumerState<CustomerTaggingPage> {
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    int maxLines = 1,
-    IconData? icon,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 13),
-        prefixIcon: icon != null
-            ? Icon(icon, size: 18, color: Colors.grey[500])
-            : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
-        ),
-        isDense: true,
-      ),
-    );
-  }
-
   Widget _buildBottomBar() {
     return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: DecoratedBox(
         decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0x1A000000))),
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.divider)),
         ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton.icon(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: AppButton.primary(
+            label: _selectedLocation == null
+                ? 'Tentukan lokasi di peta dahulu'
+                : 'Simpan Lokasi & Alamat',
+            leadingIcon: Icons.save_outlined,
+            size: AppButtonSize.lg,
+            isFullWidth: true,
+            isLoading: _isSaving,
             onPressed: (_isSaving || _selectedLocation == null) ? null : _save,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey[300],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Icon(Icons.save_outlined),
-            label: Text(
-              _isSaving
-                  ? 'Menyimpan...'
-                  : _selectedLocation == null
-                  ? 'Tentukan lokasi di peta dahulu'
-                  : 'Simpan Lokasi & Alamat',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
           ),
         ),
       ),

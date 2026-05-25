@@ -9,6 +9,7 @@ import '../../../../core/constants/api_constants.dart';
 import '../../../../core/providers/database_providers.dart';
 import '../../../../core/services/connectivity_service.dart';
 import '../../../../core/services/last_sync_service.dart';
+import '../../../../core/utils/formatters.dart';
 import 'models/promo_model.dart';
 
 final promoRepositoryProvider = Provider<PromoRepository>((ref) {
@@ -428,7 +429,7 @@ class PromoRepository {
     }
 
     return AvailablePromos(
-      syncedAt: DateTime.now().toIso8601String(),
+      syncedAt: Formatters.nowServerIso(),
       aturanHarga: aturanHarga,
       grosir: grosir,
       hadiah: hadiah,

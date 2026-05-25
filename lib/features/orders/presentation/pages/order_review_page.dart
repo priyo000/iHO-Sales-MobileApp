@@ -4,14 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_badge.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_card.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_empty_state.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
+
 import '../../../../core/providers/database_providers.dart';
-import '../controllers/cart_controller.dart';
-import '../controllers/order_controller.dart';
-import '../controllers/promo_controller.dart';
 import '../../data/models/cart_item_model.dart';
 import '../../data/models/product_model.dart';
+import '../controllers/cart_controller.dart';
+import '../controllers/order_controller.dart';
 import '../controllers/order_history_controller.dart';
+import '../controllers/promo_controller.dart';
 
 class OrderReviewPage extends ConsumerStatefulWidget {
   final dynamic kunjunganId;
@@ -57,10 +66,8 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
     final subtotal = ref.read(cartControllerProvider.notifier).totalAmount;
     final diskon = promoSelection.totalDiskon;
     final totalHadiah = promoSelection.totalHadiah;
-    final finalTotal = (subtotal + totalHadiah - diskon).clamp(
-      0.0,
-      double.infinity,
-    );
+    final finalTotal =
+        (subtotal + totalHadiah - diskon).clamp(0.0, double.infinity);
 
     final currencyFmt = NumberFormat.currency(
       locale: 'id_ID',
@@ -68,73 +75,24 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
       decimalDigits: 0,
     );
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+    return AppScaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios,
-            size: 20,
-            color: Colors.black87,
-          ),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text(
-          'Review Pesanan',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
+        title: const Text('Review Pesanan'),
       ),
       body: cartItems.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_cart_outlined,
-                    size: 64,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Keranjang kosong',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => context.push('/catalog'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Tambah Item'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+          ? AppEmptyState(
+              icon: Icons.shopping_cart_outlined,
+              title: 'Keranjang kosong',
+              actionLabel: 'Tambah Item',
+              onAction: () => context.push('/catalog'),
             )
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                // Items Section
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  shadow: true,
+                  bordered: false,
                   child: Column(
                     children: [
                       ...cartItems.asMap().entries.map((entry) {
@@ -148,8 +106,8 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
                             if (i > 0)
                               const Divider(
                                 height: 1,
-                                indent: 16,
-                                endIndent: 16,
+                                indent: AppSpacing.lg,
+                                endIndent: AppSpacing.lg,
                               ),
                             _OrderItemTile(
                               item: item,
@@ -160,10 +118,12 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
                           ],
                         );
                       }),
-                      // Tambah Produk Button
                       Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: _DashedOutlineButton(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: AppButton.secondary(
+                          label: 'Tambah Produk',
+                          leadingIcon: Icons.add,
+                          isFullWidth: true,
                           onPressed: () => context.push(
                             '/catalog',
                             extra: {
@@ -176,167 +136,109 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
                               'initialNotes': widget.initialNotes,
                             },
                           ),
-                          icon: Icons.add,
-                          label: 'Tambah Produk',
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 16),
-
-                // Order Summary Card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: AppSpacing.lg),
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  shadow: true,
+                  bordered: false,
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Subtotal',
-                            style: TextStyle(color: Colors.black87),
-                          ),
-                          Text(
-                            currencyFmt.format(subtotal),
-                            style: const TextStyle(color: Colors.black87),
-                          ),
-                        ],
+                      _summaryRow(
+                        'Subtotal',
+                        currencyFmt.format(subtotal),
+                        labelStyle: AppTextStyles.bodyMedium,
+                        valueStyle: AppTextStyles.bodyMedium,
                       ),
                       if (diskon > 0) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Total Diskon',
-                              style: TextStyle(color: Colors.green[700]),
-                            ),
-                            Text(
-                              '-${currencyFmt.format(diskon)}',
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: AppSpacing.sm),
+                        _summaryRow(
+                          'Total Diskon',
+                          '-${currencyFmt.format(diskon)}',
+                          labelStyle: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.success,
+                          ),
+                          valueStyle: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                       if (totalHadiah > 0) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
-                                const Text(
+                                Text(
                                   'Hadiah',
-                                  style: TextStyle(color: Colors.orange),
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.warning,
+                                  ),
                                 ),
-                                const SizedBox(width: 4),
-                                Icon(
+                                const SizedBox(width: AppSpacing.xs),
+                                const Icon(
                                   Icons.card_giftcard,
-                                  color: Colors.orange[700],
+                                  color: AppColors.warning,
                                   size: 16,
                                 ),
                               ],
                             ),
                             Text(
                               '+${currencyFmt.format(totalHadiah)}',
-                              style: TextStyle(
-                                color: Colors.orange[700],
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.warning,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
                       ],
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.md),
                       const Divider(),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Total',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            currencyFmt.format(finalTotal),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: AppTheme.primary,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: AppSpacing.md),
+                      _summaryRow(
+                        'Total',
+                        currencyFmt.format(finalTotal),
+                        labelStyle: AppTextStyles.headingSmall,
+                        valueStyle: AppTextStyles.headingSmall.copyWith(
+                          color: AppColors.primary,
+                        ),
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 100),
               ],
             ),
-      bottomNavigationBar: cartItems.isNotEmpty
-          ? Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitOrder,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+      bottomBar: cartItems.isNotEmpty
+          ? SafeArea(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.textPrimary.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(widget.isEdit
-                            ? 'SIMPAN PERUBAHAN'
-                            : 'SUBMIT PESANAN'),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: AppButton.primary(
+                    label: widget.isEdit
+                        ? 'SIMPAN PERUBAHAN'
+                        : 'SUBMIT PESANAN',
+                    size: AppButtonSize.lg,
+                    isFullWidth: true,
+                    isLoading: _isSubmitting,
+                    onPressed: _isSubmitting ? null : _submitOrder,
                   ),
                 ),
               ),
@@ -345,8 +247,26 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
     );
   }
 
-  Future<void> _editItem(BuildContext context, WidgetRef ref, CartItem item) async {
-    // Fetch fresh product with units from DB to ensure dropdown renders
+  Widget _summaryRow(
+    String label,
+    String value, {
+    required TextStyle labelStyle,
+    required TextStyle valueStyle,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: labelStyle),
+        Text(value, style: valueStyle),
+      ],
+    );
+  }
+
+  Future<void> _editItem(
+    BuildContext context,
+    WidgetRef ref,
+    CartItem item,
+  ) async {
     final db = ref.read(appDatabaseProvider);
     final productRow = await db.getProduct(item.product.id);
     Product freshProduct;
@@ -430,7 +350,7 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
                   ? 'Pesanan berhasil diperbarui!'
                   : 'Pesanan berhasil submitted!',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         context.go('/orders');
@@ -442,7 +362,7 @@ class _OrderReviewPageState extends ConsumerState<OrderReviewPage> {
                   ? 'Gagal memperbarui pesanan.'
                   : 'Gagal mengirim pesanan. Silakan coba lagi.',
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -473,145 +393,71 @@ class _OrderItemTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         child: Row(
           children: [
             Container(
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               ),
               child: item.product.gambarUrl != null
                   ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                       child: Image.network(
                         item.product.gambarUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Icon(
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
                           Icons.inventory_2_outlined,
-                          color: Colors.grey[400],
+                          color: AppColors.textMuted,
                         ),
                       ),
                     )
-                  : Icon(Icons.inventory_2_outlined, color: Colors.grey[400]),
+                  : const Icon(
+                      Icons.inventory_2_outlined,
+                      color: AppColors.textMuted,
+                    ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item.product.namaProduk,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: Colors.black87,
-                    ),
+                    style: AppTextStyles.titleMedium,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     '${item.quantity}x ${currencyFmt.format(item.price)}',
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    style: AppTextStyles.bodySmall,
                   ),
                   if (hasPromo) ...[
                     const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isHadiah
-                            ? Colors.orange.withValues(alpha: 0.1)
-                            : Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isHadiah)
-                            Icon(
-                              Icons.card_giftcard,
-                              size: 12,
-                              color: Colors.orange[700],
-                            )
-                          else
-                            Icon(
-                              Icons.local_offer,
-                              size: 12,
-                              color: Colors.green[700],
-                            ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isHadiah
-                                ? 'Hadiah'
-                                : '-${currencyFmt.format(itemPromo.diskonAmount)}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isHadiah
-                                  ? Colors.orange[700]
-                                  : Colors.green[700],
-                            ),
-                          ),
-                        ],
-                      ),
+                    AppBadge(
+                      label: isHadiah
+                          ? 'Hadiah'
+                          : '-${currencyFmt.format(itemPromo.diskonAmount)}',
+                      icon: isHadiah ? Icons.card_giftcard : Icons.local_offer,
+                      color:
+                          isHadiah ? AppColors.warning : AppColors.success,
                     ),
                   ],
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Dashed outline button with blue theme
-class _DashedOutlineButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final IconData icon;
-  final String label;
-
-  const _DashedOutlineButton({
-    required this.onPressed,
-    required this.icon,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppTheme.primary,
-            width: 1.5,
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppTheme.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppTheme.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textMuted,
+              size: 20,
             ),
           ],
         ),

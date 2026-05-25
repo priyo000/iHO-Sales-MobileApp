@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+
 import '../../../../core/permission/permission_service.dart';
 
 class PermissionRequestPage extends StatefulWidget {
@@ -47,20 +52,16 @@ class _PermissionRequestPageState extends State<PermissionRequestPage> {
         await Permission.photos.status != PermissionStatus.denied;
 
     final Map<Permission, bool> states = {};
-    states[Permission.location] =
-        statuses[Permission.location]?.isGranted ??
+    states[Permission.location] = statuses[Permission.location]?.isGranted ??
         _permissionStates[Permission.location]!;
-    states[Permission.camera] =
-        statuses[Permission.camera]?.isGranted ??
+    states[Permission.camera] = statuses[Permission.camera]?.isGranted ??
         _permissionStates[Permission.camera]!;
 
     if (isNewAndroid) {
-      states[Permission.storage] =
-          statuses[Permission.photos]?.isGranted ??
+      states[Permission.storage] = statuses[Permission.photos]?.isGranted ??
           _permissionStates[Permission.storage]!;
     } else {
-      states[Permission.storage] =
-          statuses[Permission.storage]?.isGranted ??
+      states[Permission.storage] = statuses[Permission.storage]?.isGranted ??
           _permissionStates[Permission.storage]!;
     }
 
@@ -70,7 +71,6 @@ class _PermissionRequestPageState extends State<PermissionRequestPage> {
     if (allGranted) {
       if (mounted) context.go('/login');
     } else {
-      // If some permanently denied, show settings dialog
       bool hasPermanentlyDenied = false;
       statuses.forEach((permission, status) {
         if (status.isPermanentlyDenied) {
@@ -112,81 +112,58 @@ class _PermissionRequestPageState extends State<PermissionRequestPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxxl),
               const Icon(
                 Icons.security_outlined,
                 size: 64,
-                color: AppTheme.primary,
+                color: AppColors.primary,
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Izin Aplikasi',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.xl),
+              Text('Izin Aplikasi', style: AppTextStyles.headingLarge),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Sales Tracker membutuhkan izin berikut agar semua fitur (Absensi, Foto, & Rute) berjalan lancar.',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 16,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textSecondary,
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 40),
-
+              const SizedBox(height: AppSpacing.xxl),
               _PermissionTile(
                 icon: Icons.location_on_outlined,
                 title: 'Lokasi',
                 description: 'Untuk validasi titik check-in & tracking rute.',
                 isGranted: _permissionStates[Permission.location] ?? false,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
               _PermissionTile(
                 icon: Icons.camera_alt_outlined,
                 title: 'Kamera',
                 description: 'Untuk mengambil foto bukti kunjungan & toko.',
                 isGranted: _permissionStates[Permission.camera] ?? false,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
               _PermissionTile(
                 icon: Icons.folder_outlined,
                 title: 'Penyimpanan',
                 description: 'Untuk menyimpan data & lampiran aplikasi.',
                 isGranted: _permissionStates[Permission.storage] ?? false,
               ),
-
               const Spacer(),
-
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _requestPermissions,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Berikan Semua Izin',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
+              AppButton.primary(
+                label: 'Berikan Semua Izin',
+                size: AppButtonSize.lg,
+                isFullWidth: true,
+                onPressed: _requestPermissions,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),
@@ -211,50 +188,46 @@ class _PermissionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: isGranted
-            ? Colors.green.withValues(alpha: 0.05)
-            : Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
+            ? AppColors.success.withValues(alpha: 0.05)
+            : AppColors.divider,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
         border: Border.all(
           color: isGranted
-              ? Colors.green.withValues(alpha: 0.2)
-              : Colors.grey[200]!,
+              ? AppColors.success.withValues(alpha: 0.2)
+              : AppColors.border,
         ),
       ),
       child: Row(
         children: [
           Icon(
             icon,
-            color: isGranted ? Colors.green : AppTheme.primary,
+            color: isGranted ? AppColors.success : AppColors.primary,
             size: 28,
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isGranted ? Colors.green[800] : AppTheme.textDark,
+                  style: AppTextStyles.titleLarge.copyWith(
+                    color:
+                        isGranted ? AppColors.success : AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(description, style: AppTextStyles.bodySmall),
               ],
             ),
           ),
           if (isGranted)
-            const Icon(Icons.check_circle, color: Colors.green)
+            const Icon(Icons.check_circle, color: AppColors.success)
           else
-            const Icon(Icons.circle_outlined, color: Colors.grey),
+            const Icon(Icons.circle_outlined, color: AppColors.textMuted),
         ],
       ),
     );

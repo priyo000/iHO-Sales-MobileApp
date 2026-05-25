@@ -92,7 +92,6 @@ Future<List<Product>> _enrichWithUnits(List<ProductsTableData> rows, AppDatabase
 }
 
 class ProductController extends AsyncNotifier<PaginatedState<Product>> {
-  static const int _perPage = 20;
   bool _isSyncing = false;
 
   @override
@@ -118,15 +117,10 @@ class ProductController extends AsyncNotifier<PaginatedState<Product>> {
       // Ambil data langsung dari repository tanpa memicu revalidasi lagi (break loop)
       if (state.asData?.value.currentPage == 1) {
         final products = await repository.getProducts(
-          page: 1,
-          perPage: _perPage,
+          
         );
         state = AsyncData(PaginatedState<Product>(
           items: products,
-          currentPage: 1,
-          lastPage: 1,
-          isLoadingMore: false,
-          isRefreshing: false,
         ));
       }
     } catch (e) {
@@ -163,7 +157,6 @@ class ProductController extends AsyncNotifier<PaginatedState<Product>> {
     // 1. Ambil dari Cache Lokal (Instant UX)
     final products = await repository.getProducts(
       page: page,
-      perPage: _perPage,
     );
 
     // 2. Jika halaman 1 dan bukan dipicu oleh sync itu sendiri, jalankan revalidasi
@@ -177,10 +170,6 @@ class ProductController extends AsyncNotifier<PaginatedState<Product>> {
 
     return PaginatedState<Product>(
       items: reset ? products : [...existingItems, ...products],
-      currentPage: 1,
-      lastPage: 1,
-      isLoadingMore: false,
-      isRefreshing: false,
     );
   }
 

@@ -1,15 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
 import 'package:sales_tracker_mobile/core/utils/formatters.dart';
 
 class CustomerDetailInfoSheet extends StatelessWidget {
   final Map<dynamic, dynamic> data;
+  final ScrollController? scrollController;
 
-  const CustomerDetailInfoSheet({super.key, required this.data});
+  const CustomerDetailInfoSheet({
+    super.key,
+    required this.data,
+    this.scrollController,
+  });
+
+  /// Display the customer info as a draggable bottom sheet.
+  static Future<void> show(BuildContext context, Map<dynamic, dynamic> data) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (ctx, scrollController) => DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.radiusXxl),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Detail Lengkap', style: AppTextStyles.headingMedium),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CustomerDetailInfoSheet(
+                  data: data,
+                  scrollController: scrollController,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
+      controller: scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
         _buildSection('Identitas', [
@@ -62,7 +126,7 @@ class CustomerDetailInfoSheet extends StatelessWidget {
         _buildSection('Lainnya', [
           _buildRow('Hari Kunjungan', data['hari_kunjungan']),
           _buildRow('Frekuensi', data['frekuensi_kunjungan']),
-          _buildRow('Last Visit', _formatLastVisitDate(data['last_visit_date'])),
+          _buildRow('Kunjungan Terakhir', _formatLastVisitDate(data['last_visit_date'])),
         ]),
         const SizedBox(height: 40),
       ],
@@ -88,7 +152,7 @@ class CustomerDetailInfoSheet extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: AppTheme.primary,
+              color: AppColors.primary,
             ),
           ),
         ),
@@ -104,9 +168,9 @@ class CustomerDetailInfoSheet extends StatelessWidget {
               final index = entry.key;
               final widget = entry.value;
               final isLast = index == validChildren.length - 1;
-              return Container(
+              return DecoratedBox(
                 decoration: isLast
-                    ? null
+                    ? const BoxDecoration()
                     : BoxDecoration(
                         border: Border(
                           bottom: BorderSide(color: Colors.grey[200]!),
@@ -138,7 +202,7 @@ class CustomerDetailInfoSheet extends StatelessWidget {
             flex: 4,
             child: Text(
               label,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
           ),
           Expanded(

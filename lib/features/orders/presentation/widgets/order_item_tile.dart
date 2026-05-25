@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class OrderItemTile extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -78,15 +78,15 @@ class OrderItemTile extends StatelessWidget {
       }
     }
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isHadiah
               ? Colors.orange.shade200
               : hasPromo
-              ? AppTheme.success.withValues(alpha: 0.25)
+              ? AppColors.success.withValues(alpha: 0.25)
               : hasBackorder
               ? Colors.orange.shade200
               : Colors.grey.shade100,
@@ -150,14 +150,14 @@ class OrderItemTile extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: hargaTebus > 0
                                     ? Colors.orange.shade400
-                                    : AppTheme.success,
+                                    : AppColors.success,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 hargaTebus > 0 ? "TEBUS" : "BONUS",
                                 style: const TextStyle(
                                   fontSize: 9,
-                                  color: Colors.white,
+                                  color: AppColors.surface,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -214,7 +214,7 @@ class OrderItemTile extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               color: isNego
-                                  ? AppTheme.primary
+                                  ? AppColors.primary
                                   : Colors.grey.shade700,
                               fontWeight: FontWeight.w500,
                             ),
@@ -234,7 +234,7 @@ class OrderItemTile extends StatelessWidget {
                                 "Kirim $qtyActual/$qtyOrdered",
                                 style: const TextStyle(
                                   fontSize: 9,
-                                  color: Colors.white,
+                                  color: AppColors.surface,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -263,7 +263,7 @@ class OrderItemTile extends StatelessWidget {
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: AppTheme.primary,
+                          color: AppColors.primary,
                         ),
                       ),
                     ] else
@@ -274,7 +274,7 @@ class OrderItemTile extends StatelessWidget {
                           fontSize: 14,
                           color: isHadiah
                               ? Colors.orange.shade700
-                              : AppTheme.primary,
+                              : AppColors.primary,
                         ),
                       ),
                   ],
@@ -319,7 +319,7 @@ class OrderItemTile extends StatelessWidget {
                 color: const Color(0xFFF1FBF4),
                 border: Border(
                   top: BorderSide(
-                    color: AppTheme.success.withValues(alpha: 0.15),
+                    color: AppColors.success.withValues(alpha: 0.15),
                   ),
                 ),
                 borderRadius: const BorderRadius.only(
@@ -332,7 +332,7 @@ class OrderItemTile extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.local_offer, size: 12, color: AppTheme.success),
+                      const Icon(Icons.local_offer, size: 12, color: AppColors.success),
                       const SizedBox(width: 5),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -358,7 +358,7 @@ class OrderItemTile extends StatelessWidget {
                           promoNama,
                           style: const TextStyle(
                             fontSize: 11,
-                            color: AppTheme.success,
+                            color: AppColors.success,
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 1,
@@ -430,7 +430,7 @@ class OrderItemTile extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     Text(
@@ -451,14 +451,14 @@ class OrderItemTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
-                color: AppTheme.success,
+                color: AppColors.success,
                 borderRadius: BorderRadius.circular(5),
               ),
               child: Text(
                 "-${persen % 1 == 0 ? persen.toStringAsFixed(0) : persen.toStringAsFixed(1)}%",
                 style: const TextStyle(
                   fontSize: 11,
-                  color: Colors.white,
+                  color: AppColors.surface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -509,14 +509,14 @@ class OrderItemTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: ht > 0 ? Colors.orange.shade400 : AppTheme.success,
+              color: ht > 0 ? Colors.orange.shade400 : AppColors.success,
               borderRadius: BorderRadius.circular(5),
             ),
             child: Text(
               ht > 0 ? fmt.format(ht) : "Gratis",
               style: const TextStyle(
                 fontSize: 11,
-                color: Colors.white,
+                color: AppColors.surface,
                 fontWeight: FontWeight.bold,
               ),
             ),

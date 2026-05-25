@@ -69,6 +69,10 @@ class Formatters {
     return date(value);
   }
 
+  static String nowServerIso() => DateTime.now().toUtc().toIso8601String();
+
+  static String toServerIso(DateTime dt) => dt.toUtc().toIso8601String();
+
   static double _toDouble(dynamic value) {
     if (value == null) return 0;
     if (value is double) return value;

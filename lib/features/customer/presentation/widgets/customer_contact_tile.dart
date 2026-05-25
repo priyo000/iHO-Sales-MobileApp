@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class CustomerContactTile extends StatelessWidget {
   final IconData icon;
@@ -26,10 +26,10 @@ class CustomerContactTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppTheme.primary, size: 20),
+              child: Icon(icon, color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -46,13 +46,13 @@ class CustomerContactTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                   ),
                 ],
               ),
             ),
             if (onTap != null)
-              Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
           ],
         ),
       ),

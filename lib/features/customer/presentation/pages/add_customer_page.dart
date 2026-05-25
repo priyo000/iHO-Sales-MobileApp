@@ -1,21 +1,28 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:sales_tracker_mobile/core/services/location_service.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:io';
+
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/utils/formatters.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_gap.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
+
 import '../../../../core/constants/customer_status.dart';
 import '../../../../core/constants/payment.dart';
 import '../../data/customer_repository.dart';
-import '../controllers/customer_controller.dart';
 import '../../../visit/presentation/controllers/visit_controller.dart';
-import 'package:sales_tracker_mobile/core/map/cached_tile_provider.dart';
+import '../controllers/customer_controller.dart';
+import '../widgets/add_customer_business_form.dart';
+import '../widgets/add_customer_location_picker.dart';
+import '../widgets/add_customer_owner_form.dart';
+import '../widgets/add_customer_photo_picker.dart';
+import '../widgets/add_customer_summary_section.dart';
 
 class AddCustomerPage extends ConsumerStatefulWidget {
   final Map<String, dynamic>? initialData;
@@ -39,7 +46,6 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   final _calonNpwpController = TextEditingController();
   final _calonAlamatController = TextEditingController();
   final _calonKodePosController = TextEditingController();
-  final _calonTelpController = TextEditingController();
   final _calonHpController = TextEditingController();
   final _calonKotaController = TextEditingController();
 
@@ -47,7 +53,7 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   final _usahaNamaOutletController = TextEditingController();
   final _usahaNoNpwpController = TextEditingController();
   final _usahaNamaNpwpController = TextEditingController();
-  String? _usahaKlasifikasi; // Selected Category
+  String? _usahaKlasifikasi;
   final _usahaJenisProdukController = TextEditingController();
   final _usahaBerdiriSejakController = TextEditingController();
   final _usahaAlamatController = TextEditingController();
@@ -55,27 +61,20 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   final _usahaKotaController = TextEditingController();
   final _usahaProvinsiController = TextEditingController();
 
-  // Location vars
-  LatLng _currentLocation = const LatLng(-6.2088, 106.8456); // Jakarta Default
-  final MapController _mapController = MapController();
+  // Location
+  LatLng _currentLocation = const LatLng(-6.2088, 106.8456);
 
-  // Store & KTP Photo
+  // Photos
   File? _storePhoto;
   File? _ktpPhoto;
-  final ImagePicker _picker = ImagePicker();
 
-  final _usahaTelpController = TextEditingController();
-  final _usahaHpController = TextEditingController();
   final _usahaKontakPersonController = TextEditingController();
   final _usahaKontakNoKtpController = TextEditingController();
-  final _usahaKontakHpController =
-      TextEditingController(); // Added Contact Person HP
+  final _usahaKontakHpController = TextEditingController();
   final _usahaAlamatGudangController = TextEditingController();
-  final _usahaGudangKotaController = TextEditingController();
   final _usahaGudangTelpController = TextEditingController();
-  final _usahaGudangHpController = TextEditingController();
-  final _usahaKontakGudangController = TextEditingController();
-  String _usahaCaraBayar = PaymentMethod.tunai.code; // Tunai, Giro, Transfer
+  final _usahaGudangKotaController = TextEditingController();
+  String _usahaCaraBayar = PaymentMethod.tunai.code;
   final _usahaBankNamaController = TextEditingController();
   final _usahaBankCabangController = TextEditingController();
   final _usahaBankNoRekController = TextEditingController();
@@ -84,11 +83,11 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   // C. Diisi oleh salesman
   final _salesKreditAwalController = TextEditingController();
   final _salesKreditBerjalanController = TextEditingController();
-  String _salesSistemBayar = PaymentSystem.cash.code; // Cash / Credit
+  String _salesSistemBayar = PaymentSystem.cash.code;
   final _salesTopController = TextEditingController();
   final _salesLainLainController = TextEditingController();
 
-  final List<String> _categories = [
+  static const List<String> _categories = [
     'Modern Bakery',
     'Big Industry',
     'Medium Industry',
@@ -109,42 +108,35 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill fields if initialData exists (simplified mapping)
-    if (widget.initialData != null) {
-      _calonNamaPemilikController.text =
-          widget.initialData?['contactName'] ?? '';
-      _usahaNamaOutletController.text = widget.initialData?['storeName'] ?? '';
-      _usahaKecamatanController.text = widget.initialData?['kecamatan'] ?? '';
-      _usahaKotaController.text = widget.initialData?['kota'] ?? '';
-      _usahaProvinsiController.text = widget.initialData?['provinsi'] ?? '';
+    final initial = widget.initialData;
+    if (initial != null) {
+      _calonNamaPemilikController.text = initial['contactName'] ?? '';
+      _usahaNamaOutletController.text = initial['storeName'] ?? '';
+      _usahaKecamatanController.text = initial['kecamatan'] ?? '';
+      _usahaKotaController.text = initial['kota'] ?? '';
+      _usahaProvinsiController.text = initial['provinsi'] ?? '';
 
-      // Handle Location & Address
-      if (widget.initialData?['latitude'] != null &&
-          widget.initialData?['longitude'] != null) {
-        final lat = widget.initialData!['latitude'] as double;
-        final lng = widget.initialData!['longitude'] as double;
+      if (initial['latitude'] != null && initial['longitude'] != null) {
+        final lat = initial['latitude'] as double;
+        final lng = initial['longitude'] as double;
         _currentLocation = LatLng(lat, lng);
 
-        if (widget.initialData?['address'] != null) {
-          _usahaAlamatController.text = widget.initialData!['address'];
-        } else {
-          _updateAddressFromLocation(_currentLocation);
+        if (initial['address'] != null) {
+          _usahaAlamatController.text = initial['address'];
         }
       }
 
-      // Handle Photos
-      if (widget.initialData?['storePhotoPath'] != null) {
-        _storePhoto = File(widget.initialData!['storePhotoPath']);
+      if (initial['storePhotoPath'] != null) {
+        _storePhoto = File(initial['storePhotoPath']);
       }
-      if (widget.initialData?['ktpPhotoPath'] != null) {
-        _ktpPhoto = File(widget.initialData!['ktpPhotoPath']);
+      if (initial['ktpPhotoPath'] != null) {
+        _ktpPhoto = File(initial['ktpPhotoPath']);
       }
     }
   }
 
   @override
   void dispose() {
-    // Dispose all controllers
     _calonNamaPemilikController.dispose();
     _calonNoKtpController.dispose();
     _calonTempatLahirController.dispose();
@@ -152,7 +144,6 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
     _calonNpwpController.dispose();
     _calonAlamatController.dispose();
     _calonKodePosController.dispose();
-    _calonTelpController.dispose();
     _calonHpController.dispose();
     _calonKotaController.dispose();
 
@@ -165,16 +156,12 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
     _usahaKecamatanController.dispose();
     _usahaKotaController.dispose();
     _usahaProvinsiController.dispose();
-    _usahaTelpController.dispose();
-    _usahaHpController.dispose();
     _usahaKontakPersonController.dispose();
     _usahaKontakNoKtpController.dispose();
     _usahaKontakHpController.dispose();
     _usahaAlamatGudangController.dispose();
-    _usahaGudangKotaController.dispose();
     _usahaGudangTelpController.dispose();
-    _usahaGudangHpController.dispose();
-    _usahaKontakGudangController.dispose();
+    _usahaGudangKotaController.dispose();
     _usahaBankNamaController.dispose();
     _usahaBankCabangController.dispose();
     _usahaBankNoRekController.dispose();
@@ -208,25 +195,20 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
         alamatRumahPemilik: _calonAlamatController.text,
         kodePosRumah: _calonKodePosController.text,
         kotaRumah: _calonKotaController.text,
-
         noNpwpUsaha: _usahaNoNpwpController.text,
         namaNpwpUsaha: _usahaNamaNpwpController.text,
         klasifikasiOutlet: _usahaKlasifikasi,
         jenisProdukIndustri: _usahaJenisProdukController.text,
         tahunBerdiri: int.tryParse(_usahaBerdiriSejakController.text),
-
         kotaUsaha: _usahaKotaController.text,
         kecamatanUsaha: _usahaKecamatanController.text,
         provinsiUsaha: _usahaProvinsiController.text,
-
         namaKontakPerson: _usahaKontakPersonController.text,
         noKtpKontak: _usahaKontakNoKtpController.text,
         noHpKontak: _usahaKontakHpController.text,
-
         alamatGudang: _usahaAlamatGudangController.text,
         kotaGudang: _usahaGudangKotaController.text,
         noTelpGudang: _usahaGudangTelpController.text,
-
         sistemPembayaran: _salesSistemBayar,
         caraPembayaran: _usahaCaraBayar,
         namaBank: _usahaBankNamaController.text,
@@ -236,122 +218,22 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
         topHari: int.tryParse(_salesTopController.text),
         limitKreditAwal: double.tryParse(_salesKreditAwalController.text),
         catatanLain: _salesLainLainController.text,
-
         status: CustomerStatus.pending.code,
         storePhoto: _storePhoto,
         ktpPhoto: _ktpPhoto,
       );
 
-      // Invalidate customer list so the new entry appears right away
       ref.invalidate(customerControllerProvider);
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Data pelanggan berhasil disimpan. Memulai kunjungan...',
-          ),
-          backgroundColor: AppTheme.success,
-        ),
-      );
-
-      // Auto check-in to the new customer
-      final customerData = response['data'] as Map<String, dynamic>? ?? {};
-      final isOffline = response['is_offline'] == true;
-
-      // Online: use server_id (matches Drift serverId for stream lookup)
-      // Offline: use local_ref (matches Drift primary key id)
-      final serverId = response['server_id'];
-      final localRef = response['local_ref'] ?? customerData['local_ref'];
-
-      // The pelangganId for check-in and detail page lookup
-      // Must match what's stored in Drift so the stream provider can find it
-      final pelangganId = isOffline ? localRef : (serverId ?? localRef);
-
-      if (pelangganId != null) {
-        final pelangganDataMap = {
-          'nama_toko': customerData['nama_toko'] ?? _usahaNamaOutletController.text,
-          'nama_pemilik': customerData['nama_pemilik'] ?? _calonNamaPemilikController.text,
-          'alamat_usaha': customerData['alamat_usaha'] ?? _usahaAlamatController.text,
-          'no_hp_pribadi': customerData['no_hp_pribadi'] ?? _calonHpController.text,
-          'is_offline': isOffline,
-        };
-
-        try {
-          final kunjunganId = await ref
-              .read(visitControllerProvider.notifier)
-              .checkIn(
-                jadwalId: null,
-                pelangganId: pelangganId,
-                lat: _currentLocation.latitude,
-                long: _currentLocation.longitude,
-                jarakValidasi: 0.0,
-                pelangganDataMap: pelangganDataMap,
-              );
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  isOffline
-                      ? 'Pelanggan disimpan offline. Check-in akan otomatis tersinkron.'
-                      : 'Pelanggan berhasil ditambahkan dan dikunjungi.',
-                ),
-                backgroundColor: AppTheme.success,
-              ),
-            );
-
-            // Build pelanggan map with correct id for detail page lookup
-            final pelangganForDetail = {
-              ...customerData,
-              'id': pelangganId,
-              'nama_toko': customerData['nama_toko'] ?? _usahaNamaOutletController.text,
-              'nama_pemilik': customerData['nama_pemilik'] ?? _calonNamaPemilikController.text,
-              'alamat_usaha': customerData['alamat_usaha'] ?? _usahaAlamatController.text,
-              'no_hp_pribadi': customerData['no_hp_pribadi'] ?? _calonHpController.text,
-            };
-
-            context.go('/schedule');
-
-            Future.microtask(() {
-              if (mounted) {
-                context.push(
-                  '/customers/detail',
-                  extra: {
-                    'pelanggan': pelangganForDetail,
-                    'id_kunjungan': kunjunganId.kunjunganId,
-                    'waktu_check_in': DateTime.now().toIso8601String(),
-                    'is_offline': isOffline,
-                  },
-                );
-              }
-            });
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Check-in otomatis gagal: $e')),
-            );
-            context.go('/home');
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Pelanggan berhasil disimpan.'),
-              backgroundColor: AppTheme.success,
-            ),
-          );
-          context.go('/home');
-        }
-      }
+      _showSnack('Data pelanggan berhasil disimpan. Memulai kunjungan...',
+          color: AppColors.success);
+      await _handleAfterCustomerCreated(response);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal menyimpan: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -359,76 +241,94 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
     }
   }
 
-  // NOTE: In a real app, use a Geocoding API (Google Maps, OpenCage, etc.)
-  // to get the address from coordinates.
-  Future<void> _updateAddressFromLocation(LatLng point) async {
-    setState(() {
-      _currentLocation = point;
-    });
-
-    try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${point.latitude}&lon=${point.longitude}&zoom=18&addressdetails=1',
-      );
-
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'com.sales_tracker.mobile'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final address = data['address'] as Map<String, dynamic>?;
-
-        if (data['display_name'] != null) {
-          setState(() {
-            _usahaAlamatController.text = data['display_name'];
-            if (address != null) {
-              _usahaKecamatanController.text =
-                  address['suburb'] ??
-                  address['district'] ??
-                  address['village'] ??
-                  '';
-              _usahaKotaController.text =
-                  address['city'] ??
-                  address['city_district'] ??
-                  address['regency'] ??
-                  '';
-              _usahaProvinsiController.text =
-                  address['state'] ?? address['province'] ?? '';
-            }
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Error getting address: $e');
-    }
+  void _showSnack(String message, {Color? color}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
-  Future<void> _getCurrentLocation() async {
-    final Position position;
-    try {
-      position = await LocationService.getCurrentWithPermission();
-    } on LocationException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
-      }
+  Future<void> _handleAfterCustomerCreated(Map<String, dynamic> response) async {
+    final customerData = response['data'] as Map<String, dynamic>? ?? {};
+    final isOffline = response['is_offline'] == true;
+    final serverId = response['server_id'];
+    final localRef = response['local_ref'] ?? customerData['local_ref'];
+    final pelangganId = isOffline ? localRef : (serverId ?? localRef);
+
+    if (pelangganId == null) {
+      if (!mounted) return;
+      _showSnack('Pelanggan berhasil disimpan.', color: AppColors.success);
+      context.go('/home');
       return;
     }
-    LatLng newPos = LatLng(position.latitude, position.longitude);
-    _mapController.move(newPos, 15);
-    _updateAddressFromLocation(newPos);
+
+    final namaToko =
+        customerData['nama_toko'] ?? _usahaNamaOutletController.text;
+    final namaPemilik =
+        customerData['nama_pemilik'] ?? _calonNamaPemilikController.text;
+    final alamatUsaha =
+        customerData['alamat_usaha'] ?? _usahaAlamatController.text;
+    final noHpPribadi =
+        customerData['no_hp_pribadi'] ?? _calonHpController.text;
+
+    final pelangganDataMap = {
+      'nama_toko': namaToko,
+      'nama_pemilik': namaPemilik,
+      'alamat_usaha': alamatUsaha,
+      'no_hp_pribadi': noHpPribadi,
+      'is_offline': isOffline,
+    };
+
+    try {
+      final kunjunganId = await ref
+          .read(visitControllerProvider.notifier)
+          .checkIn(
+            jadwalId: null,
+            pelangganId: pelangganId,
+            lat: _currentLocation.latitude,
+            long: _currentLocation.longitude,
+            jarakValidasi: 0.0,
+            pelangganDataMap: pelangganDataMap,
+          );
+
+      if (!mounted) return;
+      _showSnack(
+        isOffline
+            ? 'Pelanggan disimpan offline. Check-in akan otomatis tersinkron.'
+            : 'Pelanggan berhasil ditambahkan dan dikunjungi.',
+        color: AppColors.success,
+      );
+
+      final pelangganForDetail = {
+        ...customerData,
+        'id': pelangganId,
+        'nama_toko': namaToko,
+        'nama_pemilik': namaPemilik,
+        'alamat_usaha': alamatUsaha,
+        'no_hp_pribadi': noHpPribadi,
+      };
+
+      context.go('/schedule');
+      Future.microtask(() {
+        if (!mounted) return;
+        context.push('/customers/detail', extra: {
+          'pelanggan': pelangganForDetail,
+          'id_kunjungan': kunjunganId.kunjunganId,
+          'waktu_check_in': Formatters.nowServerIso(),
+          'is_offline': isOffline,
+        });
+      });
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Check-in otomatis gagal: $e');
+      context.go('/home');
+    }
   }
 
   void _copyFromCalonPelanggan() {
     setState(() {
       _usahaKontakPersonController.text = _calonNamaPemilikController.text;
       _usahaKontakNoKtpController.text = _calonNoKtpController.text;
-      // Also copy phone/hp to contact person phone/hp if available
-      // Assuming we add a contact person phone field (which is requested)
-      // For now I'll map it to a new field I'll create
       _usahaKontakHpController.text = _calonHpController.text;
     });
 
@@ -436,842 +336,155 @@ class _AddCustomerPageState extends ConsumerState<AddCustomerPage> {
       const SnackBar(
         content: Text('Data Kontak Person berhasil disalin!'),
         duration: Duration(seconds: 1),
-        backgroundColor: AppTheme.primary,
+        backgroundColor: AppColors.primary,
       ),
     );
   }
 
-  Future<void> _pickImage(ImageSource source, bool isStore) async {
-    final XFile? photo = await _picker.pickImage(source: source);
-    if (photo != null) {
-      setState(() {
-        if (isStore) {
-          _storePhoto = File(photo.path);
-        } else {
-          _ktpPhoto = File(photo.path);
-        }
-      });
-    }
-  }
-
-  void _showImagePickerOptions({bool isStore = true}) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Ambil Foto dari Kamera'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera, isStore);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Pilih dari Galeri'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery, isStore);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
+  Widget _sectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primary,
-            ),
+            style: AppTextStyles.headingSmall.copyWith(color: AppColors.primary),
           ),
-          const SizedBox(height: 4),
-          Container(height: 2, width: 40, color: AppTheme.primary),
+          const AppGap.xs(),
+          Container(height: 2, width: 40, color: AppColors.primary),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    IconData? icon,
-    TextInputType inputType = TextInputType.text,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-    bool isDate = false,
-    bool isRequired = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: inputType,
-        maxLines: maxLines,
-        readOnly: isDate,
-        onTap: isDate
-            ? () async {
-                DateTime? pickedDate = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime(1990),
-                  firstDate: DateTime(1950),
-                  lastDate: DateTime.now(),
-                );
-                if (pickedDate != null) {
-                  controller.text =
-                      "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
-                }
-              }
-            : null,
-        decoration: InputDecoration(
-          label: RichText(
-            text: TextSpan(
-              text: label,
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-              children: [
-                if (isRequired)
-                  const TextSpan(
-                    text: ' *',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-          isDense: true,
-        ),
-        validator: validator,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // Light background
+    return AppScaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
-          'Input Data Pelanggan',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
+        title: const Text('Input Data Pelanggan'),
+        backgroundColor: AppColors.surface,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // A. DATA CALON PELANGGAN
-                    _buildSectionHeader('A. Data Calon Pelanggan'),
-
-                    // Keterangan wajib
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Tanda ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const Text(
-                            '*',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            ' menandakan field wajib diisi',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    _buildTextField(
-                      label: 'Nama Pemilik',
-                      controller: _calonNamaPemilikController,
-                      icon: Icons.person,
-                      isRequired: true,
-                      validator: (v) =>
-                          v!.isEmpty ? 'Nama pemilik wajib diisi' : null,
-                    ),
-                    _buildTextField(
-                      label: 'No. KTP/SIM/Paspor',
-                      controller: _calonNoKtpController,
-                      inputType: TextInputType.number,
-                      icon: Icons.badge,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Tempat Lahir',
-                            controller: _calonTempatLahirController,
-                            icon: Icons.location_city,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Tgl Lahir',
-                            controller: _calonTglLahirController,
-                            icon: Icons.calendar_today,
-                            isDate: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                    _buildTextField(
-                      label: 'No. NPWP',
-                      controller: _calonNpwpController,
-                      inputType: TextInputType.number,
-                      icon: Icons.confirmation_number,
-                    ),
-                    _buildTextField(
-                      label: 'Alamat Rumah',
-                      controller: _calonAlamatController,
-                      maxLines: 3,
-                      icon: Icons.home,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Kode Pos',
-                            controller: _calonKodePosController,
-                            inputType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Kota',
-                            controller: _calonKotaController,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Telp/Hp',
-                            controller: _calonHpController,
-                            inputType: TextInputType.phone,
-                            icon: Icons.phone_android,
-                            isRequired: true,
-                            validator: (v) =>
-                                v!.isEmpty ? 'No HP wajib diisi' : null,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // B. DATA TEMPAT USAHA
-                    const SizedBox(height: 16),
-                    _buildSectionHeader('B. Data Tempat Usaha'),
-
-                    _buildTextField(
-                      label: 'Nama Outlet Usaha',
-                      controller: _usahaNamaOutletController,
-                      icon: Icons.storefront,
-                      isRequired: true,
-                      validator: (v) =>
-                          v!.isEmpty ? 'Nama outlet wajib diisi' : null,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'No. NPWP Usaha',
-                            controller: _usahaNoNpwpController,
-                            inputType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Nama NPWP',
-                            controller: _usahaNamaNpwpController,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    DropdownButtonFormField<String>(
-                      initialValue: _usahaKlasifikasi,
-                      decoration: InputDecoration(
-                        label: RichText(
-                          text: TextSpan(
-                            text: 'Klasifikasi Outlet (Kategori)',
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                              fontSize: 14,
-                            ),
-                            children: const [
-                              TextSpan(
-                                text: ' *',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                      ),
-                      items: _categories.map((String category) {
-                        return DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _usahaKlasifikasi = newValue;
-                        });
-                      },
-                      validator: (value) =>
-                          value == null ? 'Wajib dipilih' : null,
-                    ),
-                    if (_usahaKlasifikasi == 'Big Industry' ||
-                        _usahaKlasifikasi == 'Medium Industry') ...[
-                      const SizedBox(height: 12),
-                      _buildTextField(
-                        label: 'Jenis Produk Industri',
-                        controller: _usahaJenisProdukController,
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-
-                    _buildTextField(
-                      label: 'Berdiri Sejak',
-                      controller: _usahaBerdiriSejakController,
-                      inputType: TextInputType.number,
-                      icon: Icons.verified_user,
-                    ),
-
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Lokasi Usaha (Pinpoint)',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            ' *',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          children: [
-                            FlutterMap(
-                              mapController: _mapController,
-                              options: MapOptions(
-                                initialCenter: _currentLocation,
-                                initialZoom: 13.0,
-                                onTap: (_, point) =>
-                                    _updateAddressFromLocation(point),
-                              ),
-                              children: [
-                                TileLayer(
-                                  urlTemplate:
-                                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  userAgentPackageName:
-                                      'com.sales_tracker.mobile',
-                                  tileProvider: CachedTileProvider(),
-                                ),
-                                MarkerLayer(
-                                  markers: [
-                                    Marker(
-                                      point: _currentLocation,
-                                      width: 40,
-                                      height: 40,
-                                      child: const Icon(
-                                        Icons.location_on,
-                                        color: Colors.red,
-                                        size: 40,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Positioned(
-                              bottom: 10,
-                              right: 10,
-                              child: FloatingActionButton.small(
-                                heroTag: "btn_loc",
-                                onPressed: _getCurrentLocation,
-                                backgroundColor: Colors.white,
-                                child: const Icon(
-                                  Icons.my_location,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildTextField(
-                      label: 'Alamat Usaha',
-                      controller: _usahaAlamatController,
-                      maxLines: 3,
-                      icon: Icons.business,
-                      isRequired: true,
-                      validator: (v) =>
-                          v!.isEmpty ? 'Alamat usaha wajib diisi' : null,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Kecamatan',
-                            controller: _usahaKecamatanController,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Kota',
-                            controller: _usahaKotaController,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Provinsi',
-                            controller: _usahaProvinsiController,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Checkbox for copying owner data
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _isContactSameAsOwner,
-                          activeColor: AppTheme.primary,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _isContactSameAsOwner = value ?? false;
-                              if (_isContactSameAsOwner) {
-                                _copyFromCalonPelanggan();
-                              } else {
-                                // Optional: Clear fields when unchecked? keeping data is safer.
-                                // _usahaKontakPersonController.clear();
-                                // _usahaKontakNoKtpController.clear();
-                                // _usahaKontakHpController.clear();
-                              }
-                            });
-                          },
-                        ),
-                        const Text(
-                          'Samakan dengan data Pemilik',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Kontak Person',
-                            controller: _usahaKontakPersonController,
-                            icon: Icons.person_pin,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'No KTP (Kontak)',
-                            controller: _usahaKontakNoKtpController,
-                            inputType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'No HP/Telp',
-                            controller: _usahaKontakHpController,
-                            inputType: TextInputType.phone,
-                          ),
-                        ),
-                      ],
-                    ),
-                    _buildTextField(
-                      label: 'Alamat Gudang (Jika beda)',
-                      controller: _usahaAlamatGudangController,
-                      maxLines: 2,
-                      icon: Icons.warehouse,
-                    ),
-
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-                      child: Text(
-                        'Cara Pembayaran',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: PaymentMethod.values.map((method) {
-                        return ChoiceChip(
-                          label: Text(method.code),
-                          selected: _usahaCaraBayar == method.code,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _usahaCaraBayar = method.code);
-                            }
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    if (_usahaCaraBayar != PaymentMethod.tunai.code) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue.shade100),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Bank Yang Digunakan',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildTextField(
-                              label: 'Nama Bank',
-                              controller: _usahaBankNamaController,
-                            ),
-                            _buildTextField(
-                              label: 'Cabang',
-                              controller: _usahaBankCabangController,
-                            ),
-                            _buildTextField(
-                              label: 'No. Rekening',
-                              controller: _usahaBankNoRekController,
-                              inputType: TextInputType.number,
-                            ),
-                            _buildTextField(
-                              label: 'Atas Nama',
-                              controller: _usahaBankAtasNamaController,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // C. DIISI OLEH SALESMAN
-                    const SizedBox(height: 16),
-                    _buildSectionHeader('C. Diisi Oleh Salesman'),
-
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8.0, top: 4.0),
-                      child: Text(
-                        'Sistem Pembayaran',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        ChoiceChip(
-                          label: Text(PaymentSystem.cash.code),
-                          selected: _salesSistemBayar == PaymentSystem.cash.code,
-                          onSelected: (selected) =>
-                              setState(() => _salesSistemBayar = PaymentSystem.cash.code),
-                        ),
-                        const SizedBox(width: 8),
-                        ChoiceChip(
-                          label: Text(PaymentSystem.credit.code),
-                          selected: _salesSistemBayar == PaymentSystem.credit.code,
-                          onSelected: (selected) =>
-                              setState(() => _salesSistemBayar = PaymentSystem.credit.code),
-                        ),
-                      ],
-                    ),
-                    if (_salesSistemBayar == PaymentSystem.credit.code)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12.0),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
-                                    label: 'Limit Awal (Rp)',
-                                    controller: _salesKreditAwalController,
-                                    inputType: TextInputType.number,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildTextField(
-                                    label: 'Limit Berjalan (Rp)',
-                                    controller: _salesKreditBerjalanController,
-                                    inputType: TextInputType.number,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            _buildTextField(
-                              label: 'Term Of Payment / TOP (Hari)',
-                              controller: _salesTopController,
-                              inputType: TextInputType.number,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    _buildTextField(
-                      label: 'Lain-lain',
-                      controller: _salesLainLainController,
-                      maxLines: 2,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    _buildSectionHeader('Data Foto Toko'),
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => _showImagePickerOptions(isStore: true),
-                        child: Container(
-                          width: double.infinity,
-                          height: 200,
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                            image: _storePhoto != null
-                                ? DecorationImage(
-                                    image: FileImage(_storePhoto!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: _storePhoto == null
-                              ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_a_photo,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Tap untuk ambil foto toko',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : null,
-                        ),
-                      ),
-                    ),
-
-                    _buildSectionHeader('Data Foto KTP'),
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => _showImagePickerOptions(isStore: false),
-                        child: Container(
-                          width: double.infinity,
-                          height: 200, // Same height for consistency
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                            image: _ktpPhoto != null
-                                ? DecorationImage(
-                                    image: FileImage(_ktpPhoto!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: _ktpPhoto == null
-                              ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.badge_outlined,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Tap untuk ambil foto KTP',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : null,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 80),
-                  ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionHeader('A. Data Calon Pelanggan'),
+              AddCustomerOwnerForm(
+                namaPemilikController: _calonNamaPemilikController,
+                noKtpController: _calonNoKtpController,
+                tempatLahirController: _calonTempatLahirController,
+                tglLahirController: _calonTglLahirController,
+                npwpController: _calonNpwpController,
+                alamatController: _calonAlamatController,
+                kodePosController: _calonKodePosController,
+                kotaController: _calonKotaController,
+                hpController: _calonHpController,
+              ),
+              const AppGap.lg(),
+              _sectionHeader('B. Data Tempat Usaha'),
+              AddCustomerBusinessForm(
+                namaOutletController: _usahaNamaOutletController,
+                noNpwpController: _usahaNoNpwpController,
+                namaNpwpController: _usahaNamaNpwpController,
+                jenisProdukController: _usahaJenisProdukController,
+                berdiriSejakController: _usahaBerdiriSejakController,
+                alamatController: _usahaAlamatController,
+                kecamatanController: _usahaKecamatanController,
+                kotaController: _usahaKotaController,
+                provinsiController: _usahaProvinsiController,
+                kontakPersonController: _usahaKontakPersonController,
+                kontakNoKtpController: _usahaKontakNoKtpController,
+                kontakHpController: _usahaKontakHpController,
+                alamatGudangController: _usahaAlamatGudangController,
+                bankNamaController: _usahaBankNamaController,
+                bankCabangController: _usahaBankCabangController,
+                bankNoRekController: _usahaBankNoRekController,
+                bankAtasNamaController: _usahaBankAtasNamaController,
+                categories: _categories,
+                klasifikasi: _usahaKlasifikasi,
+                onKlasifikasiChanged: (v) =>
+                    setState(() => _usahaKlasifikasi = v),
+                caraBayar: _usahaCaraBayar,
+                onCaraBayarChanged: (v) =>
+                    setState(() => _usahaCaraBayar = v),
+                isContactSameAsOwner: _isContactSameAsOwner,
+                onContactSameAsOwnerChanged: (v) {
+                  setState(() => _isContactSameAsOwner = v);
+                  if (v) _copyFromCalonPelanggan();
+                },
+                locationPicker: AddCustomerLocationPicker(
+                  initialLocation: _currentLocation,
+                  onLocationChanged: (p) =>
+                      setState(() => _currentLocation = p),
+                  alamatController: _usahaAlamatController,
+                  kecamatanController: _usahaKecamatanController,
+                  kotaController: _usahaKotaController,
+                  provinsiController: _usahaProvinsiController,
                 ),
               ),
-            ),
+              const AppGap.lg(),
+              _sectionHeader('C. Diisi Oleh Salesman'),
+              AddCustomerSummarySection(
+                kreditAwalController: _salesKreditAwalController,
+                kreditBerjalanController: _salesKreditBerjalanController,
+                topController: _salesTopController,
+                lainLainController: _salesLainLainController,
+                sistemBayar: _salesSistemBayar,
+                onSistemBayarChanged: (v) =>
+                    setState(() => _salesSistemBayar = v),
+              ),
+              const AppGap.xl(),
+              AddCustomerPhotoPicker(
+                title: 'Data Foto Toko',
+                photo: _storePhoto,
+                onPhotoChanged: (f) => setState(() => _storePhoto = f),
+                placeholderIcon: Icons.add_a_photo,
+                placeholderText: 'Tap untuk ambil foto toko',
+              ),
+              AddCustomerPhotoPicker(
+                title: 'Data Foto KTP',
+                photo: _ktpPhoto,
+                onPhotoChanged: (f) => setState(() => _ktpPhoto = f),
+                placeholderIcon: Icons.badge_outlined,
+                placeholderText: 'Tap untuk ambil foto KTP',
+              ),
+            ],
           ),
-
-          // Submit Button
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
+        ),
+      ),
+      bottomBar: SafeArea(
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border(top: BorderSide(color: AppColors.divider)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
             ),
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: _isSaving ? null : _saveCustomer,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppTheme.primary.withValues(
-                    alpha: 0.6,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 2,
-                ),
-                icon: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.save_alt),
-                label: Text(
+            child: AppButton.primary(
+              label:
                   _isSaving ? 'Menyimpan...' : 'Simpan Data Pelanggan',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              leadingIcon: Icons.save_alt,
+              size: AppButtonSize.lg,
+              isFullWidth: true,
+              isLoading: _isSaving,
+              onPressed: _isSaving ? null : _saveCustomer,
             ),
           ),
-        ],
+        ),
       ),
     );
   }

@@ -1,10 +1,10 @@
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/app_database.dart';
 import '../providers/database_providers.dart';
 import '../services/sync_service.dart';
 import '../services/download_status_service.dart';
-import '../theme/app_theme.dart';
 
 class SyncQueueDialog extends ConsumerWidget {
   const SyncQueueDialog({super.key});
@@ -74,7 +74,7 @@ class SyncQueueDialog extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.sync_rounded, color: AppTheme.primary),
+                    const Icon(Icons.sync_rounded, color: AppColors.primary),
                     const SizedBox(width: 12),
                     const Text(
                       'Antrean Sinkronisasi',
@@ -100,7 +100,7 @@ class SyncQueueDialog extends ConsumerWidget {
                           height: 12,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AppTheme.primary,
+                            color: AppColors.primary,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -108,7 +108,7 @@ class SyncQueueDialog extends ConsumerWidget {
                           'Sedang memperbarui ${downloadTasks.length} data master...',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: AppTheme.primary,
+                            color: AppColors.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -225,7 +225,7 @@ class SyncQueueDialog extends ConsumerWidget {
                                   label: 'Download',
                                   icon: Icons.cloud_download_rounded,
                                   count: totalDownload,
-                                  color: AppTheme.primary,
+                                  color: AppColors.primary,
                                 ),
                               if (failedCount > 0)
                                 _SummaryChip(
@@ -249,12 +249,12 @@ class SyncQueueDialog extends ConsumerWidget {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.cloud_download_rounded,
-                              color: AppTheme.primary,
+                              color: AppColors.primary,
                               size: 20,
                             ),
                           ),
@@ -313,12 +313,35 @@ class SyncQueueDialog extends ConsumerWidget {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  ref.read(syncServiceProvider).syncAll();
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final syncService = ref.read(syncServiceProvider);
                   Navigator.pop(context);
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Memulai sinkronisasi...'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  try {
+                    await syncService.syncAll();
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Sinkronisasi selesai'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  } catch (e) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Sinkronisasi gagal: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -348,10 +371,10 @@ class SyncQueueDialog extends ConsumerWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.1),
+          color: AppColors.primary.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(_getOpIcon(op), color: AppTheme.primary, size: 20),
+        child: Icon(_getOpIcon(op), color: AppColors.primary, size: 20),
       ),
       title: Text(
         _getOpLabel(op),
@@ -451,7 +474,7 @@ class _SummaryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chipColor = hasFailed ? Colors.red : (color ?? AppTheme.primary);
+    final chipColor = hasFailed ? Colors.red : (color ?? AppColors.primary);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

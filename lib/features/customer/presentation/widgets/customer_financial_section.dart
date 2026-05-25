@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 import 'package:sales_tracker_mobile/core/utils/formatters.dart';
 
 import 'customer_stat_card.dart';
@@ -58,7 +58,7 @@ class CustomerFinancialSection extends StatelessWidget {
                     : Icons.payments_outlined,
                 subcolor: pelanggan['sistem_pembayaran'] == 'Kredit'
                     ? Colors.orange
-                    : AppTheme.success,
+                    : AppColors.success,
               ),
             ),
             const SizedBox(width: 12),
@@ -83,7 +83,7 @@ class CustomerFinancialSection extends StatelessWidget {
                   value: Formatters.currencyCompact(pelanggan['limit_kredit_awal'] ?? 0),
                   subtext: 'Limit Awal',
                   subicon: Icons.account_balance_wallet,
-                  subcolor: AppTheme.success,
+                  subcolor: AppColors.success,
                 ),
               ),
               const SizedBox(width: 12),

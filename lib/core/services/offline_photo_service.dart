@@ -37,7 +37,6 @@ class OfflinePhotoService {
         minWidth: 1024,
         minHeight: 1024,
         quality: 60,
-        format: CompressFormat.jpeg,
       );
 
       if (compressed != null) {
@@ -140,7 +139,6 @@ class OfflinePhotoService {
         minWidth: minWidth,
         minHeight: minHeight,
         quality: quality,
-        format: CompressFormat.jpeg,
       );
       return bytes;
     } catch (_) {

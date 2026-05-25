@@ -26,7 +26,7 @@ void main() {
         };
 
         expect(
-          resolveOrderForDisplay(routeOrder: routeOrder, fetchedOrder: null),
+          resolveOrderForDisplay(routeOrder: routeOrder),
           routeOrder,
         );
 

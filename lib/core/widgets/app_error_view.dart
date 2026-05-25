@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class AppErrorView extends StatelessWidget {
   final String title;
@@ -26,10 +26,10 @@ class AppErrorView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.error.withValues(alpha: 0.1),
+                color: AppColors.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 64, color: AppTheme.error),
+              child: Icon(icon, size: 64, color: AppColors.error),
             ),
             const SizedBox(height: 24),
             Text(
@@ -55,8 +55,8 @@ class AppErrorView extends StatelessWidget {
                   onPressed: onRetry,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primary,
-                    side: const BorderSide(color: AppTheme.primary, width: 1.5),
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary, width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

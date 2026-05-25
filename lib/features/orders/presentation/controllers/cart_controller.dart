@@ -45,9 +45,6 @@ class CartWithDbController extends Notifier<CartState> {
   CartState build() {
     return CartState(
       items: [],
-      pelangganId: null,
-      pelangganData: null,
-      kunjunganId: null,
     );
   }
 

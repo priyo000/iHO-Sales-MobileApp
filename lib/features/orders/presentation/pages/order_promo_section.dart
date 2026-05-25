@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 import '../controllers/promo_controller.dart';
 import '../../data/models/cart_item_model.dart';
 import '../../data/models/promo_model.dart';
@@ -81,7 +81,7 @@ class ProductPromoRow extends ConsumerWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: selected != null
-                    ? AppTheme.success.withValues(alpha: 0.4)
+                    ? AppColors.success.withValues(alpha: 0.4)
                     : Colors.grey.shade200,
               ),
             ),
@@ -90,7 +90,7 @@ class ProductPromoRow extends ConsumerWidget {
                 Icon(
                   selected != null ? Icons.local_offer : Icons.local_offer_outlined,
                   size: 14,
-                  color: selected != null ? AppTheme.success : Colors.grey.shade500,
+                  color: selected != null ? AppColors.success : Colors.grey.shade500,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -103,7 +103,7 @@ class ProductPromoRow extends ConsumerWidget {
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.success,
+                                color: AppColors.success,
                               ),
                             ),
                             if (selected.diskonAmount > 0)
@@ -111,7 +111,7 @@ class ProductPromoRow extends ConsumerWidget {
                                 'Hemat ${_fmt.format(selected.diskonAmount)}',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: AppTheme.success.withValues(alpha: 0.8),
+                                  color: AppColors.success.withValues(alpha: 0.8),
                                 ),
                               )
                             else if (selected.isHadiah)
@@ -119,7 +119,7 @@ class ProductPromoRow extends ConsumerWidget {
                                 'Hadiah: ${selected.namaProdukHadiah ?? ""} x${selected.qtyHadiah ?? 1}',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: AppTheme.success.withValues(alpha: 0.8),
+                                  color: AppColors.success.withValues(alpha: 0.8),
                                 ),
                               ),
                           ],
@@ -135,7 +135,7 @@ class ProductPromoRow extends ConsumerWidget {
                 Icon(
                   Icons.chevron_right,
                   size: 16,
-                  color: selected != null ? AppTheme.success : Colors.grey.shade400,
+                  color: selected != null ? AppColors.success : Colors.grey.shade400,
                 ),
               ],
             ),
@@ -241,9 +241,9 @@ class HadiahNotaSection extends ConsumerWidget {
           children: [
             const _SectionLabel('HADIAH PER NOTA'),
             const SizedBox(height: 8),
-            Container(
+            DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade200),
               ),
@@ -299,7 +299,7 @@ class _PromoBottomSheetState extends State<_PromoBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.only(
@@ -325,9 +325,9 @@ class _PromoBottomSheetState extends State<_PromoBottomSheet> {
           ),
           const SizedBox(height: 16),
           // Title
-          Text(
+          const Text(
             'Pilih Promo',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           Text(
             widget.productName,
@@ -365,7 +365,7 @@ class _PromoBottomSheetState extends State<_PromoBottomSheet> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: enabled ? Colors.black87 : Colors.grey,
+                              color: enabled ? AppColors.textPrimary : Colors.grey,
                             ),
                           ),
                         ),
@@ -385,7 +385,7 @@ class _PromoBottomSheetState extends State<_PromoBottomSheet> {
                         opt.benefit,
                         style: TextStyle(
                           fontSize: 11,
-                          color: enabled ? AppTheme.success : Colors.grey,
+                          color: enabled ? AppColors.success : Colors.grey,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -419,8 +419,8 @@ class _PromoBottomSheetState extends State<_PromoBottomSheet> {
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.surface,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -465,7 +465,7 @@ class _PromoOptionTile extends StatelessWidget {
               : enabled ? Colors.grey.shade50 : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? AppTheme.primary : Colors.grey.shade200,
+            color: isSelected ? AppColors.primary : Colors.grey.shade200,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -479,7 +479,7 @@ class _PromoOptionTile extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppTheme.primary : Colors.grey.shade400,
+                  color: isSelected ? AppColors.primary : Colors.grey.shade400,
                   width: 2,
                 ),
               ),
@@ -490,7 +490,7 @@ class _PromoOptionTile extends StatelessWidget {
                         height: 8,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppTheme.primary,
+                          color: AppColors.primary,
                         ),
                       ),
                     )
@@ -567,13 +567,13 @@ class _HadiahNotaTile extends StatelessWidget {
                 border: Border.all(
                   color: !syaratOk
                       ? Colors.grey.shade300
-                      : isSelected ? AppTheme.primary : Colors.grey.shade400,
+                      : isSelected ? AppColors.primary : Colors.grey.shade400,
                   width: 2,
                 ),
-                color: isSelected ? AppTheme.primary : Colors.transparent,
+                color: isSelected ? AppColors.primary : Colors.transparent,
               ),
               child: isSelected
-                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  ? const Icon(Icons.check, size: 14, color: AppColors.surface)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -586,7 +586,7 @@ class _HadiahNotaTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: syaratOk ? Colors.black87 : Colors.grey,
+                      color: syaratOk ? AppColors.textPrimary : Colors.grey,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -595,7 +595,7 @@ class _HadiahNotaTile extends StatelessWidget {
                     '${item.hargaTebus > 0 ? " (${_fmt.format(item.hargaTebus)})" : " (Gratis)"}',
                     style: TextStyle(
                       fontSize: 11,
-                      color: syaratOk ? AppTheme.success : Colors.grey,
+                      color: syaratOk ? AppColors.success : Colors.grey,
                     ),
                   ),
                   Text(
@@ -673,7 +673,7 @@ class _AturanHargaDetail extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ],
@@ -691,19 +691,19 @@ class _AturanHargaDetail extends StatelessWidget {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppTheme.success,
+                    color: AppColors.success,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     persenStr,
-                    style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 10, color: AppColors.surface, fontWeight: FontWeight.bold),
                   ),
                 );
               }),
               if (selisih > 0)
                 Text(
                   'Hemat ${_fmt.format(selisih)}/pcs',
-                  style: TextStyle(fontSize: 10, color: AppTheme.success),
+                  style: const TextStyle(fontSize: 10, color: AppColors.success),
                 ),
             ],
           ),
@@ -734,7 +734,7 @@ class _GrosirDetail extends StatelessWidget {
               color: isActive ? Colors.green.shade50 : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: isActive ? AppTheme.success.withValues(alpha: 0.4) : Colors.grey.shade200,
+                color: isActive ? AppColors.success.withValues(alpha: 0.4) : Colors.grey.shade200,
               ),
             ),
             child: Row(
@@ -744,7 +744,7 @@ class _GrosirDetail extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    color: isActive ? AppTheme.success : Colors.grey.shade600,
+                    color: isActive ? AppColors.success : Colors.grey.shade600,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -757,12 +757,12 @@ class _GrosirDetail extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
-                      color: isActive ? AppTheme.success : Colors.grey.shade400,
+                      color: isActive ? AppColors.success : Colors.grey.shade400,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       persenStr,
-                      style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 9, color: AppColors.surface, fontWeight: FontWeight.bold),
                     ),
                   );
                 }),
@@ -775,13 +775,13 @@ class _GrosirDetail extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                        color: isActive ? Colors.black87 : Colors.grey.shade500,
+                        color: isActive ? AppColors.textPrimary : Colors.grey.shade500,
                       ),
                     ),
                     if (selisih > 0 && hNormal > 0)
                       Text(
                         'Hemat ${_fmt.format(selisih)}/pcs',
-                        style: TextStyle(fontSize: 9, color: isActive ? AppTheme.success : Colors.grey.shade400),
+                        style: TextStyle(fontSize: 9, color: isActive ? AppColors.success : Colors.grey.shade400),
                       ),
                   ],
                 ),
@@ -822,12 +822,12 @@ class _HadiahDetail extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: item.hargaTebus > 0 ? Colors.orange.shade400 : AppTheme.success,
+              color: item.hargaTebus > 0 ? Colors.orange.shade400 : AppColors.success,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               hargaLabel,
-              style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 11, color: AppColors.surface, fontWeight: FontWeight.bold),
             ),
           ),
         ],

@@ -154,9 +154,17 @@ class VisitDao extends DatabaseAccessor<AppDatabase> with _$VisitDaoMixin {
   }
 
   Future<List<VisitsTableData>> getTodayVisits() async {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final now = DateTime.now();
+    final startUtc =
+        DateTime(now.year, now.month, now.day).toUtc().toIso8601String();
+    final endUtc = DateTime(now.year, now.month, now.day)
+        .add(const Duration(days: 1))
+        .toUtc()
+        .toIso8601String();
     return await (select(visitsTable)
-          ..where((t) => t.waktuCheckIn.like('$today%'))
+          ..where((t) =>
+              t.waktuCheckIn.isBiggerOrEqualValue(startUtc) &
+              t.waktuCheckIn.isSmallerThanValue(endUtc))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .get();
   }
@@ -215,9 +223,17 @@ class VisitDao extends DatabaseAccessor<AppDatabase> with _$VisitDaoMixin {
   }
 
   Stream<List<VisitsTableData>> watchTodayVisits() {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final now = DateTime.now();
+    final startUtc =
+        DateTime(now.year, now.month, now.day).toUtc().toIso8601String();
+    final endUtc = DateTime(now.year, now.month, now.day)
+        .add(const Duration(days: 1))
+        .toUtc()
+        .toIso8601String();
     return (select(visitsTable)
-          ..where((t) => t.waktuCheckIn.like('$today%'))
+          ..where((t) =>
+              t.waktuCheckIn.isBiggerOrEqualValue(startUtc) &
+              t.waktuCheckIn.isSmallerThanValue(endUtc))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .watch();
   }

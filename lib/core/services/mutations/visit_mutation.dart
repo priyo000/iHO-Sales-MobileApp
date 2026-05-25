@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../db/app_database.dart';
 import '../../constants/api_constants.dart';
+import '../../utils/formatters.dart';
 import '../sync_service.dart';
 import '../offline_photo_service.dart';
 
@@ -59,13 +60,12 @@ class VisitMutation {
     final clientRef =
         'visit_${DateTime.now().millisecondsSinceEpoch}_${(DateTime.now().microsecond % 99999).toString().padLeft(5, '0')}';
     final visitRef = clientRef;
-    final now = DateTime.now().toIso8601String();
+    final now = Formatters.nowServerIso();
 
     await _db.saveVisit(
       id: visitRef,
       scheduleId: jadwalId,
       pelangganId: pelangganId?.toString(),
-      status: 'CHECKED_IN',
       latIn: lat,
       longIn: long,
       waktuCheckIn: now,
@@ -76,7 +76,6 @@ class VisitMutation {
       await _db.updateScheduleStatusByJadwal(
         jadwalId: jadwalId,
         pelangganId: pelIdStr,
-        status: 'DIKUNJUNGI',
         waktuCheckIn: now,
       );
     } else if (jadwalId == null && pelangganId != null) {
@@ -148,7 +147,7 @@ class VisitMutation {
     final localId = existingVisit.id;
     final serverIdForApi = existingVisit.serverId ?? idStr;
 
-    final now = DateTime.now().toIso8601String();
+    final now = Formatters.nowServerIso();
 
     final Map<String, File?> normalizedPhotos = {};
     if (photos != null) {
@@ -170,7 +169,6 @@ class VisitMutation {
 
     await _db.updateVisitCheckout(
       id: localId,
-      status: 'CHECKED_OUT',
       latOut: lat,
       longOut: long,
       waktuCheckOut: now,
@@ -181,7 +179,6 @@ class VisitMutation {
 
     await _db.updateScheduleStatusByVisitId(
       visitId: localId,
-      status: 'SELESAI',
       waktuCheckOut: now,
     );
 

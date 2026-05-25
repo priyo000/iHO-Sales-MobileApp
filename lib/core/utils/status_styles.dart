@@ -39,4 +39,15 @@ class StatusStyles {
     VisitStatus.selesai => Icons.check_circle,
     VisitStatus.dibatalkan => Icons.cancel,
   };
+
+  static Color customerColor(String? status) {
+    final s = status?.toUpperCase() ?? '';
+    return switch (s) {
+      'ACTIVE' || 'AKTIF' => AppColors.statusSuccess,
+      'PENDING' => AppColors.statusPending,
+      'PROSPECT' => AppColors.textSecondary,
+      'NONACTIVE' || 'REJECTED' => AppColors.statusFailed,
+      _ => AppColors.statusSuccess,
+    };
+  }
 }

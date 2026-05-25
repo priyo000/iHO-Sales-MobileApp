@@ -1,7 +1,7 @@
 enum Environment { development, production }
 
 class ApiConstants {
-  static const Environment _env = Environment.production;
+  static const Environment _env = Environment.development;
 
   // Development: localhost via ADB reverse (real device) or 10.0.2.2 (emulator)
   static const String _devBaseUrl = 'http://127.0.0.1:3000/api/v1/mobile';

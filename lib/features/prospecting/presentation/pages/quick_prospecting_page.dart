@@ -1,17 +1,23 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'dart:io';
 import 'dart:ui';
 
-import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:sales_tracker_mobile/core/services/location_service.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart' hide Path;
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sales_tracker_mobile/features/customer/data/customer_repository.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart' hide Path;
+
 import 'package:sales_tracker_mobile/core/map/cached_tile_provider.dart';
+import 'package:sales_tracker_mobile/core/services/location_service.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_button.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_text_field.dart';
+import 'package:sales_tracker_mobile/features/customer/data/customer_repository.dart';
 import 'package:sales_tracker_mobile/features/customer/presentation/pages/customer_tagging_page.dart';
 
 class QuickProspectingPage extends ConsumerStatefulWidget {
@@ -29,18 +35,16 @@ class QuickProspectingPage extends ConsumerStatefulWidget {
 class _QuickProspectingPageState extends ConsumerState<QuickProspectingPage> {
   final TextEditingController _storeNameController = TextEditingController();
   final TextEditingController _contactNameController = TextEditingController();
-
-  // New State Variables
-  File? _storePhoto;
-  Position? _currentLocation;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _provinsiController = TextEditingController();
   final TextEditingController _kotaController = TextEditingController();
   final TextEditingController _kecamatanController = TextEditingController();
   final MapController _mapController = MapController();
-  bool _isLoadingLocation = false;
   final ImagePicker _picker = ImagePicker();
 
+  File? _storePhoto;
+  Position? _currentLocation;
+  bool _isLoadingLocation = false;
   String? _selectedRejectionReason;
   bool _isSubmitting = false;
 
@@ -60,21 +64,19 @@ class _QuickProspectingPageState extends ConsumerState<QuickProspectingPage> {
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 85, // Good balance
-        maxWidth: 1920, // Reasonable max width
+        imageQuality: 85,
+        maxWidth: 1920,
         maxHeight: 1920,
       );
 
       if (photo != null) {
-        setState(() {
-          _storePhoto = File(photo.path);
-        });
+        setState(() => _storePhoto = File(photo.path));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to capture photo: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to capture photo: $e')),
+      );
     }
   }
 
@@ -83,19 +85,16 @@ class _QuickProspectingPageState extends ConsumerState<QuickProspectingPage> {
 
     try {
       final position = await LocationService.getCurrentWithPermission();
-
       setState(() => _currentLocation = position);
-
-      // Move map & Get Address
       _mapController.move(LatLng(position.latitude, position.longitude), 15.0);
       _getAddressFromNominatim(position.latitude, position.longitude);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error getting location: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error getting location: $e')),
+      );
     } finally {
-      setState(() => _isLoadingLocation = false);
+      if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
 
@@ -118,9 +117,9 @@ class _QuickProspectingPageState extends ConsumerState<QuickProspectingPage> {
 
   void _handleRejection() {
     if (_storeNameController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter store name')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter store name')),
+      );
       return;
     }
 
@@ -141,161 +140,75 @@ class _QuickProspectingPageState extends ConsumerState<QuickProspectingPage> {
         builder: (context, setStateModal) {
           return Container(
             padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 24,
-              bottom: MediaQuery.of(context).padding.bottom + 24,
+              left: AppSpacing.xl,
+              right: AppSpacing.xl,
+              top: AppSpacing.xl,
+              bottom: MediaQuery.of(context).padding.bottom + AppSpacing.xl,
             ),
             decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              color: AppColors.surface,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppSpacing.radiusXl),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('Laporkan Penolakan', style: AppTextStyles.headingSmall),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
-                  'Laporkan Penolakan',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
                   'Mengapa penawaran ditolak?',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      [
-                            'Tidak Tertarik',
-                            'Harga terlalu mahal',
-                            'Kontrak Kompetitor',
-                            'Pemilik tidak ada',
-                          ]
-                          .map(
-                            (reason) => ChoiceChip(
-                              label: Text(reason),
-                              selected: _selectedRejectionReason == reason,
-                              onSelected: (selected) {
-                                setStateModal(() {
-                                  _selectedRejectionReason = selected
-                                      ? reason
-                                      : null;
-                                });
-                              },
-                              selectedColor: AppTheme.error.withValues(
-                                alpha: 0.1,
-                              ),
-                              labelStyle: TextStyle(
-                                color: _selectedRejectionReason == reason
-                                    ? AppTheme.error
-                                    : Colors.grey[700],
-                                fontWeight: _selectedRejectionReason == reason
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                              backgroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(
-                                  color: _selectedRejectionReason == reason
-                                      ? AppTheme.error
-                                      : Colors.grey.shade300,
-                                ),
-                              ),
-                              showCheckmark: false,
-                            ),
-                          )
-                          .toList(),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.error,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: _isSubmitting
-                        ? null
-                        : () async {
-                            if (_selectedRejectionReason == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please select a reason'),
-                                ),
-                              );
-                              return;
-                            }
-
-                            setStateModal(() => _isSubmitting = true);
-                            try {
-                              final repo = ref.read(customerRepositoryProvider);
-                              await repo.createCustomer(
-                                namaToko: _storeNameController.text,
-                                namaPemilik:
-                                    _contactNameController.text.isNotEmpty
-                                    ? _contactNameController.text
-                                    : '-',
-                                noHpPribadi: '-',
-                                alamatUsaha: _addressController.text.isNotEmpty
-                                    ? _addressController.text
-                                    : '-',
-                                kecamatanUsaha: _kecamatanController.text,
-                                kotaUsaha: _kotaController.text,
-                                provinsiUsaha: _provinsiController.text,
-                                latitude: _currentLocation?.latitude,
-                                longitude: _currentLocation?.longitude,
-                                status: 'prospect',
-                                catatanLain:
-                                    'Alasan Penolakan: $_selectedRejectionReason',
-                                storePhoto: _storePhoto,
-                              );
-
-                              if (context.mounted) {
-                                Navigator.pop(context); // close bottom sheet
-                                context.pop(); // go back
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Penolakan berhasil dilaporkan',
-                                    ),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to report: $e'),
-                                  ),
-                                );
-                              }
-                            } finally {
-                              setStateModal(() => _isSubmitting = false);
-                            }
-                          },
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text('Kirim Penolakan'),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                   ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: const [
+                    'Tidak Tertarik',
+                    'Harga terlalu mahal',
+                    'Kontrak Kompetitor',
+                    'Pemilik tidak ada',
+                  ].map((reason) {
+                    final selected = _selectedRejectionReason == reason;
+                    return ChoiceChip(
+                      label: Text(reason),
+                      selected: selected,
+                      onSelected: (s) => setStateModal(
+                        () => _selectedRejectionReason = s ? reason : null,
+                      ),
+                      selectedColor: AppColors.error.withValues(alpha: 0.1),
+                      labelStyle: AppTextStyles.bodyMedium.copyWith(
+                        color: selected
+                            ? AppColors.error
+                            : AppColors.textSecondary,
+                        fontWeight:
+                            selected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      backgroundColor: AppColors.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusMd),
+                        side: BorderSide(
+                          color: selected ? AppColors.error : AppColors.border,
+                        ),
+                      ),
+                      showCheckmark: false,
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                AppButton.destructive(
+                  label: 'Kirim Penolakan',
+                  size: AppButtonSize.lg,
+                  isFullWidth: true,
+                  isLoading: _isSubmitting,
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => _submitRejection(context, setStateModal),
                 ),
               ],
             ),
@@ -305,11 +218,62 @@ class _QuickProspectingPageState extends ConsumerState<QuickProspectingPage> {
     );
   }
 
+  Future<void> _submitRejection(
+    BuildContext modalContext,
+    StateSetter setStateModal,
+  ) async {
+    if (_selectedRejectionReason == null) {
+      ScaffoldMessenger.of(modalContext).showSnackBar(
+        const SnackBar(content: Text('Please select a reason')),
+      );
+      return;
+    }
+
+    setStateModal(() => _isSubmitting = true);
+    try {
+      final repo = ref.read(customerRepositoryProvider);
+      await repo.createCustomer(
+        namaToko: _storeNameController.text,
+        namaPemilik: _contactNameController.text.isNotEmpty
+            ? _contactNameController.text
+            : '-',
+        noHpPribadi: '-',
+        alamatUsaha: _addressController.text.isNotEmpty
+            ? _addressController.text
+            : '-',
+        kecamatanUsaha: _kecamatanController.text,
+        kotaUsaha: _kotaController.text,
+        provinsiUsaha: _provinsiController.text,
+        latitude: _currentLocation?.latitude,
+        longitude: _currentLocation?.longitude,
+        status: 'prospect',
+        catatanLain: 'Alasan Penolakan: $_selectedRejectionReason',
+        storePhoto: _storePhoto,
+      );
+
+      if (modalContext.mounted) {
+        Navigator.pop(modalContext);
+        modalContext.pop();
+        ScaffoldMessenger.of(modalContext).showSnackBar(
+          const SnackBar(content: Text('Penolakan berhasil dilaporkan')),
+        );
+      }
+    } catch (e) {
+      if (modalContext.mounted) {
+        ScaffoldMessenger.of(modalContext).showSnackBar(
+          SnackBar(content: Text('Failed to report: $e')),
+        );
+      }
+    } finally {
+      setStateModal(() => _isSubmitting = false);
+    }
+  }
+
   void _handleRegistration() {
     if (_storeNameController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter store name')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter store name')),
+      );
       return;
     }
 
@@ -331,382 +295,279 @@ class _QuickProspectingPageState extends ConsumerState<QuickProspectingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
+    return AppScaffold(
+      backgroundColor: AppColors.surface,
       appBar: widget.embeddedInTab
-          ? null // header already provided by the parent TabBar
+          ? null
           : AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              centerTitle: true,
               leading: IconButton(
-                icon: const Icon(Icons.close, color: Colors.black87),
+                icon: const Icon(Icons.close),
                 onPressed: () => context.pop(),
               ),
-              title: const Text(
-                'Prospect Cepat',
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
+              title: const Text('Prospect Cepat'),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.history, color: Colors.black87),
+                  icon: const Icon(Icons.history),
                   onPressed: () {},
                 ),
               ],
             ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Dashed Photo Capture Area
-                    CustomPaint(
-                      painter: _DashedRectPainter(
-                        color: _storePhoto != null
-                            ? Colors.transparent
-                            : AppTheme.primary,
-                        strokeWidth: 1.5,
-                        dashWidth: 6,
-                        dashSpace: 4,
-                        radius: 16,
-                      ),
-                      child: Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: _storePhoto != null
-                              ? null
-                              : AppTheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          image: _storePhoto != null
-                              ? DecorationImage(
-                                  image: FileImage(_storePhoto!),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _pickImage,
-                            borderRadius: BorderRadius.circular(16),
-                            child: _storePhoto == null
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: const BoxDecoration(
-                                          color: AppTheme.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.add_a_photo_outlined,
-                                          size: 28,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'Capture Store Photo',
-                                        style: TextStyle(
-                                          color: AppTheme.primary,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Align(
-                                    alignment: Alignment.topRight,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.edit,
-                                          size: 20,
-                                          color: AppTheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Store Name
-                    const Text(
-                      'Nama Toko (Wajib)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _storeNameController,
-                      hint: 'e.g. Downtown Coffee Shop',
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Contact Name
-                    const Text(
-                      'Nama Kontak/Pemilik (Opsional)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _contactNameController,
-                      hint: 'Enter name',
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Address (Auto-filled)
-                    const Text(
-                      'Alamat (Otomatis)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _addressController,
-                      hint: 'Tap pin location to auto-fill',
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Location Section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Current Location',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: _getCurrentLocation,
-                          icon: _isLoadingLocation
-                              ? const SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.my_location, size: 18),
-                          label: Text(
-                            _currentLocation != null
-                                ? 'Update Pin'
-                                : 'Pin Location',
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.primary,
-                            padding: EdgeInsets.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        height: 250, // Increased height for Map
-                        width: double.infinity,
-                        decoration: BoxDecoration(color: Colors.grey[200]),
-                        child: Stack(
-                          children: [
-                            FlutterMap(
-                              mapController: _mapController,
-                              options: MapOptions(
-                                initialCenter: _currentLocation != null
-                                    ? LatLng(
-                                        _currentLocation!.latitude,
-                                        _currentLocation!.longitude,
-                                      )
-                                    : const LatLng(
-                                        -6.200000,
-                                        106.816666,
-                                      ), // Default Jakarta
-                                initialZoom: 15.0,
-                              ),
-                              children: [
-                                TileLayer(
-                                  urlTemplate:
-                                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  userAgentPackageName:
-                                      'com.sales_tracker.mobile',
-                                  tileProvider: CachedTileProvider(),
-                                ),
-                                if (_currentLocation != null)
-                                  MarkerLayer(
-                                    markers: [
-                                      Marker(
-                                        point: LatLng(
-                                          _currentLocation!.latitude,
-                                          _currentLocation!.longitude,
-                                        ),
-                                        width: 40,
-                                        height: 40,
-                                        child: const Icon(
-                                          Icons.location_on,
-                                          color: Colors.red,
-                                          size: 40,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                            // Helper text overlay if no location
-                            if (_currentLocation == null)
-                              Center(
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  child: Text(
-                                    "Tap 'Pin Location' to activate map",
-                                    style: TextStyle(color: Colors.grey[700]),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (_currentLocation != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          'Lat: ${_currentLocation!.latitude.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude.toStringAsFixed(6)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Bottom Buttons
-            Padding(
-              padding: const EdgeInsets.all(16),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: _handleRejection,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[100],
-                        foregroundColor: Colors.grey[800],
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.thumb_down, size: 20),
-                      label: const Text(
-                        'Laporkan Penolakan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  _buildPhotoCapture(),
+                  const SizedBox(height: AppSpacing.xl),
+                  const _FieldLabel('Nama Toko (Wajib)'),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    controller: _storeNameController,
+                    hint: 'e.g. Downtown Coffee Shop',
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  const _FieldLabel('Nama Kontak/Pemilik (Opsional)'),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    controller: _contactNameController,
+                    hint: 'Enter name',
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  const _FieldLabel('Alamat (Otomatis)'),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    controller: _addressController,
+                    hint: 'Tap pin location to auto-fill',
+                    type: AppTextFieldType.multiline,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  _buildLocationHeader(),
+                  const SizedBox(height: AppSpacing.md),
+                  _buildMap(),
+                  if (_currentLocation != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
+                      child: Text(
+                        'Lat: ${_currentLocation!.latitude.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude.toStringAsFixed(6)}',
+                        style: AppTextStyles.caption,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: _handleRegistration,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0, // Flat look as per typically modern UI
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.person_add, size: 20),
-                      label: const Text(
-                        'Daftarkan jadi Pelanggan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
-          ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              children: [
+                AppButton.secondary(
+                  label: 'Laporkan Penolakan',
+                  leadingIcon: Icons.thumb_down,
+                  size: AppButtonSize.lg,
+                  isFullWidth: true,
+                  onPressed: _handleRejection,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppButton.primary(
+                  label: 'Daftarkan jadi Pelanggan',
+                  leadingIcon: Icons.person_add,
+                  size: AppButtonSize.lg,
+                  isFullWidth: true,
+                  onPressed: _handleRegistration,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoCapture() {
+    return CustomPaint(
+      painter: _DashedRectPainter(
+        color: _storePhoto != null ? Colors.transparent : AppColors.primary,
+        strokeWidth: 1.5,
+        dashWidth: 6,
+        dashSpace: 4,
+        radius: AppSpacing.radiusXl,
+      ),
+      child: Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: _storePhoto != null
+              ? null
+              : AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          image: _storePhoto != null
+              ? DecorationImage(
+                  image: FileImage(_storePhoto!),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _pickImage,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+            child: _storePhoto == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 28,
+                          color: AppColors.surface,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Capture Store Photo',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  )
+                : Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        decoration: const BoxDecoration(
+                          color: AppColors.surface,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 20,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    int maxLines = 1,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
-      ),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: Colors.grey[400]),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
+  Widget _buildLocationHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('Current Location', style: AppTextStyles.titleLarge),
+        TextButton.icon(
+          onPressed: _getCurrentLocation,
+          icon: _isLoadingLocation
+              ? const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.my_location, size: 18),
+          label: Text(
+            _currentLocation != null ? 'Update Pin' : 'Pin Location',
           ),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMap() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+      child: SizedBox(
+        height: 250,
+        width: double.infinity,
+        child: Stack(
+          children: [
+            ColoredBox(
+              color: AppColors.divider,
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _currentLocation != null
+                      ? LatLng(
+                          _currentLocation!.latitude,
+                          _currentLocation!.longitude,
+                        )
+                      : const LatLng(-6.200000, 106.816666),
+                  initialZoom: 15,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.sales_tracker.mobile',
+                    tileProvider: CachedTileProvider(),
+                  ),
+                  if (_currentLocation != null)
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(
+                            _currentLocation!.latitude,
+                            _currentLocation!.longitude,
+                          ),
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: AppColors.error,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            if (_currentLocation == null)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  color: AppColors.surface.withValues(alpha: 0.7),
+                  child: Text(
+                    "Tap 'Pin Location' to activate map",
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 }
 
-// (Removed _ReasonChip since we moved it to ChoiceChip inline in bottom sheet)
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: AppTextStyles.titleMedium);
+  }
+}
 
 class _DashedRectPainter extends CustomPainter {
   final Color color;
@@ -725,12 +586,12 @@ class _DashedRectPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
+    final paint = Paint()
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    final Path path = Path()
+    final path = Path()
       ..addRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(0, 0, size.width, size.height),
@@ -738,14 +599,13 @@ class _DashedRectPainter extends CustomPainter {
         ),
       );
 
-    final Path dashedPath = _createDashedPath(path, dashWidth, dashSpace);
-    canvas.drawPath(dashedPath, paint);
+    canvas.drawPath(_createDashedPath(path, dashWidth, dashSpace), paint);
   }
 
   Path _createDashedPath(Path source, double dashWidth, double dashSpace) {
-    final Path path = Path();
+    final path = Path();
     for (final PathMetric metric in source.computeMetrics()) {
-      double distance = 0.0;
+      double distance = 0;
       while (distance < metric.length) {
         path.addPath(
           metric.extractPath(distance, distance + dashWidth),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_scaffold.dart';
 import '../controllers/product_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../widgets/product_card.dart';
@@ -17,29 +19,27 @@ class CatalogPage extends ConsumerWidget {
 
     final products = productsState.asData?.value.items ?? [];
 
-    return Scaffold(
+    return AppScaffold(
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: TextField(
               decoration: const InputDecoration(
                 hintText: 'Cari produk...',
                 prefixIcon: Icon(Icons.search),
               ),
-              onChanged: (q) {
-                // TODO: Implement search if needed
-              },
+              onChanged: (q) {},
             ),
           ),
           Expanded(
             child: GridView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 childAspectRatio: 0.7,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                crossAxisSpacing: AppSpacing.md,
+                mainAxisSpacing: AppSpacing.md,
               ),
               itemCount: products.length,
               itemBuilder: (_, i) {

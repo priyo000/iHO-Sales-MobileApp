@@ -329,6 +329,8 @@ class SyncService {
   }
 
   Future<void> _syncAllInternal() async {
+    await _localDb.syncDao.clearStaleSyncLock(ttlMinutes: 5);
+
     final got = await _localDb.syncDao.acquireSyncLock('syncAll', ttlMinutes: 5);
     if (!got) {
       log('[SyncService] Sync sudah berjalan, skip.');
@@ -336,15 +338,18 @@ class SyncService {
     }
 
     try {
+      await _localDb.syncDao.resetStuckSyncing();
+
       final hasToken = await _ref.read(tokenStorageProvider).hasToken();
       if (!hasToken) {
         log('[SyncService] No auth token, skip sync.');
         return;
       }
 
-      final isOnline = await _connectivity.checkNow();
-      log('[SyncService] 🌐 isOnline=$isOnline');
-      if (!isOnline) return;
+      if (!_connectivity.isOnline) {
+        log('[SyncService] Offline (network layer) — skip sync, akan retry saat online.');
+        return;
+      }
 
       log('[SyncService] Memulai siklus sinkronisasi...');
 

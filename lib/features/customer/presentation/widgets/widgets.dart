@@ -1,6 +1,9 @@
 export 'customer_bottom_bar.dart';
 export 'customer_contact_section.dart';
 export 'customer_contact_tile.dart';
+export 'customer_detail_header.dart';
+export 'customer_detail_info_sheet.dart';
+export 'customer_detail_stats_row.dart';
 export 'customer_financial_section.dart';
 export 'customer_location_card.dart';
 export 'customer_stat_card.dart';

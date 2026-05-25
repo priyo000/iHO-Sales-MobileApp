@@ -8,7 +8,7 @@ class ChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return Card(child: Padding(padding: const EdgeInsets.all(32), child: Center(child: Text('Tidak ada data', style: TextStyle(color: Colors.grey)))));
+      return const Card(child: Padding(padding: EdgeInsets.all(32), child: Center(child: Text('Tidak ada data', style: TextStyle(color: Colors.grey)))));
     }
     final max = data.map((d) => d.value).reduce((a, b) => a > b ? a : b);
     return Card(

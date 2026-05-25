@@ -4,6 +4,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/formatters.dart';
 import 'sync_service.dart';
 import 'connectivity_service.dart';
 import 'token_storage.dart';
@@ -73,7 +74,7 @@ Future<void> _executePreWorkSync(ProviderContainer container, String? token) asy
 Future<void> _savePreWorkSyncTime({required String status, String? error}) async {
   final prefs = await SharedPreferences.getInstance();
   final data = {
-    'last_sync': DateTime.now().toIso8601String(),
+    'last_sync': Formatters.nowServerIso(),
     'status': status,
     'error': ?error,
   };

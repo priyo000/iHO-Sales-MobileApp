@@ -16,15 +16,15 @@ class UpdateBanner extends StatelessWidget {
           decoration: const BoxDecoration(
             color: Color(0xFFDC2626),
           ),
-          child: Row(
+          child: const Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.system_update_alt_rounded,
                 color: Colors.white,
                 size: 18,
               ),
-              const SizedBox(width: 10),
-              const Expanded(
+              SizedBox(width: 10),
+              Expanded(
                 child: Text(
                   'Versi baru tersedia — Tap untuk update',
                   style: TextStyle(
@@ -34,7 +34,7 @@ class UpdateBanner extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+              Icon(Icons.chevron_right, color: Colors.white, size: 18),
             ],
           ),
         ),

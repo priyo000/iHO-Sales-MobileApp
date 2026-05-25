@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_badge.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_card.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_scaffold.dart';
 import 'package:sales_tracker_mobile/core/widgets/store_image.dart';
 
 class DailyActivityPage extends StatelessWidget {
@@ -7,7 +12,7 @@ class DailyActivityPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(
         title: const Text('Daily Activity'),
         actions: [
@@ -15,38 +20,25 @@ class DailyActivityPage extends StatelessWidget {
         ],
       ),
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 5,
         itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+          return AppCard(
+            margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            shadow: true,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Store Photo
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: StoreImage(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  child: const StoreImage(
                     url: null,
                     width: 60,
                     height: 60,
-                    fallbackIcon: Icons.store,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,42 +46,30 @@ class DailyActivityPage extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Toko Maju Jaya',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                          Expanded(
+                            child: Text(
+                              'Toko Maju Jaya',
+                              style: AppTextStyles.titleLarge,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Selesai',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          const SizedBox(width: AppSpacing.sm),
+                          const AppBadge(
+                            label: 'Selesai',
+                            color: AppColors.success,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Order #ORD-2023-${100 + index}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        style: AppTextStyles.bodySmall,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
                         'Total: Rp 1.250.000',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.titleMedium,
                       ),
                     ],
                   ),
@@ -101,8 +81,8 @@ class DailyActivityPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        backgroundColor: AppTheme.primary,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: AppColors.textOnPrimary),
       ),
     );
   }

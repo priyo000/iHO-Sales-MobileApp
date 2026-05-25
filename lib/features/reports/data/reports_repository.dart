@@ -38,7 +38,7 @@ class ReportsRepository {
         final monday = now.subtract(Duration(days: now.weekday - 1));
         return DateTime(monday.year, monday.month, monday.day);
       case 'bulan_ini':
-        return DateTime(now.year, now.month, 1);
+        return DateTime(now.year, now.month);
       default:
         final fallback = now.subtract(const Duration(days: 7));
         return DateTime(fallback.year, fallback.month, fallback.day);

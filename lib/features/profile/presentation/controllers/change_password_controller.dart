@@ -37,7 +37,6 @@ class ChangePasswordController extends Notifier<ChangePasswordState> {
   }) async {
     state = state.copyWith(
       isLoading: true,
-      errorMessage: null,
       isSuccess: false,
     );
     try {

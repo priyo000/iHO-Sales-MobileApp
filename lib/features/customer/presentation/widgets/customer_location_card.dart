@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 
 class CustomerLocationCard extends StatelessWidget {
   final Map<dynamic, dynamic> pelanggan;
@@ -30,7 +30,7 @@ class CustomerLocationCard extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined, size: 15),
                 label: const Text('Edit Alamat', style: TextStyle(fontSize: 13)),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.primary,
+                  foregroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -39,7 +39,7 @@ class CustomerLocationCard extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Card(
-          color: Colors.white,
+          color: AppColors.surface,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -55,12 +55,12 @@ class CustomerLocationCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
                         Icons.location_on,
-                        color: AppTheme.primary,
+                        color: AppColors.primary,
                         size: 20,
                       ),
                     ),
@@ -69,11 +69,11 @@ class CustomerLocationCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Alamat Usaha',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[500],
+                              color: AppColors.textMuted,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -82,9 +82,9 @@ class CustomerLocationCard extends StatelessWidget {
                             pelanggan['alamat_usaha'] as String? ??
                                 pelanggan['alamat'] as String? ??
                                 'Alamat tidak tersedia',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[800],
+                              color: AppColors.textPrimary,
                               height: 1.4,
                             ),
                           ),
@@ -101,15 +101,15 @@ class CustomerLocationCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Koordinat',
-                              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                             ),
                             Text(
                               '${pelanggan['latitude']}, ${pelanggan['longitude']}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[700],
+                                color: AppColors.textSecondary,
                                 fontFamily: 'monospace',
                               ),
                             ),
@@ -132,11 +132,11 @@ class CustomerLocationCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary,
+                          color: AppColors.primary,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primary.withValues(alpha: 0.3),
+                              color: AppColors.primary.withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -144,7 +144,7 @@ class CustomerLocationCard extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.directions,
-                          color: Colors.white,
+                          color: AppColors.surface,
                           size: 20,
                         ),
                       ),

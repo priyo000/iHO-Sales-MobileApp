@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import 'package:sales_tracker_mobile/core/constants/order_status.dart';
-import 'package:sales_tracker_mobile/core/theme/app_theme.dart';
+import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
+import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
+import 'package:sales_tracker_mobile/core/theme/app_text_styles.dart';
+import 'package:sales_tracker_mobile/core/utils/status_styles.dart';
+import 'package:sales_tracker_mobile/core/widgets/app_badge.dart';
 import 'package:sales_tracker_mobile/core/widgets/store_image.dart';
 
-/// A single order card for use inside ListView.builder.
-/// Extracted to a separate widget class so Flutter can properly recycle
-/// list items for better performance with large datasets.
 class OrderCard extends StatelessWidget {
   final Map<String, dynamic> order;
   final NumberFormat currencyFormat;
@@ -21,21 +23,22 @@ class OrderCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _getStatusColor(String status) {
+  String _statusLabel(String status) {
     switch (status.toLowerCase()) {
       case 'sukses':
       case 'success':
-        return Colors.green;
+        return 'SUKSES';
       case 'proses':
       case 'process':
-        return Colors.blue;
+        return 'PROSES';
       case 'pending':
-        return Colors.orange;
+        return 'TERTUNDA';
       case 'batal':
       case 'canceled':
-        return Colors.red;
+      case 'cancelled':
+        return 'BATAL';
       default:
-        return Colors.grey;
+        return status.toUpperCase();
     }
   }
 
@@ -44,13 +47,12 @@ class OrderCard extends StatelessWidget {
     final pelanggan = order['pelanggan'] as Map<String, dynamic>? ?? {};
     final items = order['items'] as List? ?? [];
     final total = double.tryParse(order['total_tagihan'].toString()) ?? 0.0;
-    // Parse date: prefer tanggal_transaksi (epoch ms from API) over created_at
+
     DateTime? date;
     final tanggalTx = order['tanggal_transaksi'];
     if (tanggalTx is int) {
       date = DateTime.fromMillisecondsSinceEpoch(tanggalTx);
     } else {
-      // Fallback: created_at (epoch ms) or tanggal_transaksi (ISO string)
       final createdAt = order['created_at'];
       if (createdAt is int) {
         date = DateTime.fromMillisecondsSinceEpoch(createdAt);
@@ -61,9 +63,10 @@ class OrderCard extends StatelessWidget {
         date = dateStr != null ? DateTime.tryParse(dateStr)?.toLocal() : null;
       }
     }
-    final statusColor = _getStatusColor(order['status'] ?? '');
+
+    final statusRaw = (order['status'] ?? '').toString();
+    final statusColor = StatusStyles.colorFromCode(statusRaw);
     final isOffline = order['is_local'] == true;
-    final statusText = (order['status'] ?? '-').toString().toUpperCase();
     final noPesanan = order['no_pesanan'] as String?;
     final isPendingSync = isOffline && noPesanan == null;
 
@@ -71,80 +74,56 @@ class OrderCard extends StatelessWidget {
       onTap: () => onTap(order),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.08),
+              color: AppColors.textMuted.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row: order number + status badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    if (isPendingSync)
-                      Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                Expanded(
+                  child: Row(
+                    children: [
+                      if (isPendingSync) ...[
+                        AppBadge(
+                          label: 'TERTUNDA',
+                          color: StatusStyles.color(OrderStatus.pending),
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                      ],
+                      Flexible(
                         child: Text(
-                          OrderStatus.pending.code,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
+                          noPesanan ?? 'Menunggu sinkronisasi',
+                          style: AppTextStyles.titleMedium.copyWith(
+                            color: noPesanan == null
+                                ? AppColors.textSecondary
+                                : AppColors.textPrimary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    Text(
-                      noPesanan ?? 'Menunggu sinkronisasi',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: noPesanan == null
-                            ? Colors.grey[600]
-                            : Colors.black87,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                const SizedBox(width: AppSpacing.sm),
+                AppBadge(
+                  label: _statusLabel(statusRaw),
+                  color: statusColor,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Row: store image + name + date | qty + total
+            const SizedBox(height: AppSpacing.md),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -152,10 +131,10 @@ class OrderCard extends StatelessWidget {
                   url: pelanggan['foto_toko_url'] as String?,
                   width: 48,
                   height: 48,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   fallbackIconSize: 24,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,18 +144,17 @@ class OrderCard extends StatelessWidget {
                             pelanggan['nama_pelanggan'] ??
                             pelanggan['nama_pemilik'] ??
                             pelanggan['nama'] ??
-                            'Unknown Store',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                            'Toko Tidak Dikenal',
+                        style: AppTextStyles.titleMedium,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         date != null ? dateFormat.format(date) : '-',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -186,15 +164,15 @@ class OrderCard extends StatelessWidget {
                   children: [
                     Text(
                       currencyFormat.format(total),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppTheme.primary,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: AppColors.primary,
                       ),
                     ),
                     Text(
-                      '${items.length} items',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      '${items.length} item',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),

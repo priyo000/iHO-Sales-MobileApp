@@ -36,9 +36,7 @@ class PushNotificationService {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     NotificationSettings settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
+      
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {

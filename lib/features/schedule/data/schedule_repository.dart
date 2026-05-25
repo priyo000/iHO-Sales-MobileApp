@@ -381,7 +381,6 @@ class ScheduleRepository {
       lat: lat,
       long: lng,
       jarakValidasi: jarakValidasi,
-      pelangganDataMap: null,
     );
   }
 
