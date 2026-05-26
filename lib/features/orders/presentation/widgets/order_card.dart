@@ -23,25 +23,6 @@ class OrderCard extends StatelessWidget {
     required this.onTap,
   });
 
-  String _statusLabel(String status) {
-    switch (status.toLowerCase()) {
-      case 'sukses':
-      case 'success':
-        return 'SUKSES';
-      case 'proses':
-      case 'process':
-        return 'PROSES';
-      case 'pending':
-        return 'TERTUNDA';
-      case 'batal':
-      case 'canceled':
-      case 'cancelled':
-        return 'BATAL';
-      default:
-        return status.toUpperCase();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final pelanggan = order['pelanggan'] as Map<String, dynamic>? ?? {};
@@ -65,7 +46,8 @@ class OrderCard extends StatelessWidget {
     }
 
     final statusRaw = (order['status'] ?? '').toString();
-    final statusColor = StatusStyles.colorFromCode(statusRaw);
+    final orderStatus = OrderStatus.fromCode(statusRaw);
+    final statusColor = StatusStyles.color(orderStatus);
     final isOffline = order['is_local'] == true;
     final noPesanan = order['no_pesanan'] as String?;
     final isPendingSync = isOffline && noPesanan == null;
@@ -95,9 +77,10 @@ class OrderCard extends StatelessWidget {
                   child: Row(
                     children: [
                       if (isPendingSync) ...[
-                        AppBadge(
-                          label: 'TERTUNDA',
-                          color: StatusStyles.color(OrderStatus.pending),
+                        const AppBadge(
+                          label: 'BELUM SYNC',
+                          color: AppColors.textSecondary,
+                          icon: Icons.cloud_upload_outlined,
                         ),
                         const SizedBox(width: AppSpacing.sm),
                       ],
@@ -118,7 +101,7 @@ class OrderCard extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 AppBadge(
-                  label: _statusLabel(statusRaw),
+                  label: orderStatus.label.toUpperCase(),
                   color: statusColor,
                 ),
               ],

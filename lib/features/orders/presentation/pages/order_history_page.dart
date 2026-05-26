@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:sales_tracker_mobile/core/constants/order_status.dart';
 import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
 import 'package:sales_tracker_mobile/core/theme/app_spacing.dart';
 import 'package:sales_tracker_mobile/core/widgets/app_chip.dart';
@@ -15,6 +16,8 @@ import 'package:sales_tracker_mobile/core/widgets/shimmer_loading.dart';
 import '../../presentation/widgets/order_card.dart';
 import '../controllers/order_history_controller.dart';
 
+const String _kAllFilter = 'Semua';
+
 class OrderHistoryPage extends ConsumerStatefulWidget {
   const OrderHistoryPage({super.key});
 
@@ -23,8 +26,11 @@ class OrderHistoryPage extends ConsumerStatefulWidget {
 }
 
 class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
-  String _selectedFilter = 'Semua';
-  final List<String> _filters = ['Semua', 'Tertunda', 'Proses', 'Sukses', 'Batal'];
+  String _selectedFilter = _kAllFilter;
+  static final List<String> _filters = [
+    _kAllFilter,
+    ...OrderStatus.values.map((s) => s.label),
+  ];
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
 

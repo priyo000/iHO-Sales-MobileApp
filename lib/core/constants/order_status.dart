@@ -17,6 +17,13 @@ enum OrderStatus {
     );
   }
 
+  static OrderStatus? fromLabel(String label) {
+    for (final s in OrderStatus.values) {
+      if (s.label.toLowerCase() == label.toLowerCase()) return s;
+    }
+    return null;
+  }
+
   String get label => switch (this) {
     OrderStatus.pending => 'Tertunda',
     OrderStatus.processing => 'Diproses',

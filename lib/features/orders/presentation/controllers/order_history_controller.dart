@@ -63,18 +63,10 @@ class OrderHistoryController extends Notifier<List<Map<String, dynamic>>> {
     var filtered = orders;
 
     if (_filter.status != 'All' && _filter.status != 'Semua') {
-      final statusMap = {
-        'Pending': OrderStatus.pending.code,
-        'Tertunda': OrderStatus.pending.code,
-        'Proses': 'APPROVED',
-        'Sukses': 'COMPLETED',
-        'Batal': 'CANCELLED',
-      };
-      final serverStatus =
-          statusMap[_filter.status] ?? _filter.status.toUpperCase();
+      final matched = OrderStatus.fromLabel(_filter.status);
+      final serverStatus = matched?.code ?? _filter.status.toUpperCase();
       filtered = filtered.where((o) {
-        final s = o.status.toUpperCase();
-        return s == serverStatus || s.contains(serverStatus);
+        return o.status.toUpperCase() == serverStatus;
       }).toList();
     }
 
