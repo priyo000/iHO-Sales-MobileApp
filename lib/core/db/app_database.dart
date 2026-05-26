@@ -1554,25 +1554,21 @@ class AppDatabase extends _$AppDatabase {
     String startDate,
     String endDate,
   ) async {
-    final startMs = DateTime.parse(startDate).millisecondsSinceEpoch;
-    final endMs = DateTime.parse(
-      endDate,
-    ).add(const Duration(days: 1)).millisecondsSinceEpoch;
+    final start = DateTime.parse(startDate);
+    final end = DateTime.parse(endDate).add(const Duration(days: 1));
+    final startLocal = DateTime(start.year, start.month, start.day);
+    final endLocal = DateTime(end.year, end.month, end.day);
+    final startUtcStr = startLocal.toUtc().toIso8601String();
+    final endUtcStr = endLocal.toUtc().toIso8601String();
+    final startMs = startLocal.millisecondsSinceEpoch;
+    final endMs = endLocal.millisecondsSinceEpoch;
 
     return await (select(visitsTable)
           ..where(
             (t) =>
                 (t.waktuCheckIn.isNotNull() &
-                    t.waktuCheckIn.isBiggerOrEqualValue(
-                      DateTime.fromMillisecondsSinceEpoch(
-                        startMs,
-                      ).toIso8601String(),
-                    ) &
-                    t.waktuCheckIn.isSmallerThanValue(
-                      DateTime.fromMillisecondsSinceEpoch(
-                        endMs,
-                      ).toIso8601String(),
-                    )) |
+                    t.waktuCheckIn.isBiggerOrEqualValue(startUtcStr) &
+                    t.waktuCheckIn.isSmallerThanValue(endUtcStr)) |
                 (t.waktuCheckIn.isNull() &
                     t.createdAt.isBiggerOrEqualValue(startMs) &
                     t.createdAt.isSmallerThanValue(endMs)),
@@ -1966,21 +1962,34 @@ class AppDatabase extends _$AppDatabase {
 
   /// Watch today's visits - used for dashboard SSOT
   Stream<List<VisitsTableData>> watchTodayVisits() {
-    final today = DateTime.now().toIso8601String().substring(
-      0,
-      10,
-    ); // 'YYYY-MM-DD'
+    final now = DateTime.now();
+    final startUtc =
+        DateTime(now.year, now.month, now.day).toUtc().toIso8601String();
+    final endUtc = DateTime(now.year, now.month, now.day)
+        .add(const Duration(days: 1))
+        .toUtc()
+        .toIso8601String();
     return (select(visitsTable)
-          ..where((t) => t.waktuCheckIn.like('$today%'))
+          ..where((t) =>
+              t.waktuCheckIn.isBiggerOrEqualValue(startUtc) &
+              t.waktuCheckIn.isSmallerThanValue(endUtc))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .watch();
   }
 
   /// Get today's visits (non-reactive) - for initial load
   Future<List<VisitsTableData>> getTodayVisits() async {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final now = DateTime.now();
+    final startUtc =
+        DateTime(now.year, now.month, now.day).toUtc().toIso8601String();
+    final endUtc = DateTime(now.year, now.month, now.day)
+        .add(const Duration(days: 1))
+        .toUtc()
+        .toIso8601String();
     return await (select(visitsTable)
-          ..where((t) => t.waktuCheckIn.like('$today%'))
+          ..where((t) =>
+              t.waktuCheckIn.isBiggerOrEqualValue(startUtc) &
+              t.waktuCheckIn.isSmallerThanValue(endUtc))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .get();
   }
