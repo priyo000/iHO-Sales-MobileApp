@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:sales_tracker_mobile/core/router/app_router.dart';
 
@@ -102,12 +103,19 @@ class PushNotificationService {
   static void _navigate(String? type, String? id) {
     log('Navigating for type: $type, id: $id');
 
+    final navState = rootNavigatorKey.currentState;
+    final ctx = navState?.context;
+    if (ctx == null) {
+      log('Navigate failed: rootNavigatorKey has no current context');
+      return;
+    }
+
     if (type == 'gamifikasi') {
-      appRouter.push('/dashboard');
+      ctx.push('/dashboard');
     } else if (type == 'order' && id != null) {
-      appRouter.push('/orders/$id');
+      ctx.push('/orders/$id');
     } else {
-      appRouter.push('/notifications');
+      ctx.push('/notifications');
     }
   }
 

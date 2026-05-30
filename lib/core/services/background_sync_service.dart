@@ -4,10 +4,22 @@ import 'package:workmanager/workmanager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../network/dio_client.dart';
+import '../providers/database_providers.dart';
 import '../utils/formatters.dart';
 import 'sync_service.dart';
 import 'connectivity_service.dart';
 import 'token_storage.dart';
+
+/// Background isolate Dio: refreshes tokens like the foreground app (the access
+/// token expires every ~15 min, so the queue flush needs a fresh one), but with
+/// NO `onAuthFailure` callback — a background isolate has no UI and must never
+/// silently wipe the session. Genuine session expiry is handled by the
+/// foreground app the next time the user opens it.
+final _backgroundDioOverride = dioClientProvider.overrideWith((ref) {
+  final tokenStorage = ref.watch(tokenStorageProvider);
+  return DioClient(tokenStorage: tokenStorage);
+});
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -23,7 +35,10 @@ void callbackDispatcher() {
     // NOTE: Background sync berjalan di isolate terpisah.
     // Sync queue dan SSOT operations tetap di main app melalui
     // Workmanager callback - kita hanya trigger sync di sini.
-    final container = ProviderContainer();
+    // DioClient di-override agar TIDAK trigger logout (no UI di background).
+    final container = ProviderContainer(
+      overrides: [_backgroundDioOverride],
+    );
 
     try {
       if (task == 'preWorkSync') {

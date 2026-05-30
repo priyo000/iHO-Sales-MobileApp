@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -51,7 +52,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       debugPrint('Startup: Checking auth status...');
       final prefs = await SharedPreferences.getInstance();
       final hasToken = await ref.read(tokenStorageProvider).hasToken();
-      final hasCachedUser = (prefs.getString('user_data') ?? '').isNotEmpty;
+      final cachedUserStr = prefs.getString('user_data') ?? '';
+      final hasCachedUser = cachedUserStr.isNotEmpty;
       final user = ref.read(userProvider);
       final isAuthenticated = hasToken || hasCachedUser || user != null;
       debugPrint(
@@ -60,6 +62,15 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
       if (mounted) {
         if (isAuthenticated) {
+          if (user == null && hasCachedUser) {
+            try {
+              final decoded = jsonDecode(cachedUserStr) as Map<String, dynamic>;
+              ref.read(userProvider.notifier).setUser(decoded);
+            } catch (e) {
+              debugPrint('Startup: Failed to hydrate userProvider from cache: $e');
+            }
+          }
+
           debugPrint('Startup: Starting PreloadService...');
           // Preload all data to Drift before going to home
           // This ensures data is available immediately on dashboard

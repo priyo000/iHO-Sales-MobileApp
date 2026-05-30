@@ -7,6 +7,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/auth_controller.dart';
 import '../db/app_database.dart';
 import '../db/daos/daos.dart';
 import '../network/dio_client.dart';
@@ -79,7 +80,12 @@ final visitDaoProvider = Provider<VisitDao>((ref) {
 
 final dioClientProvider = Provider<DioClient>((ref) {
   final tokenStorage = ref.watch(tokenStorageProvider);
-  return DioClient(tokenStorage: tokenStorage);
+  return DioClient(
+    tokenStorage: tokenStorage,
+    onAuthFailure: () {
+      ref.read(authProvider.notifier).logoutDueToSessionExpired();
+    },
+  );
 });
 
 // ─── Network Provider Alias ─────────────────────────────────────────────────

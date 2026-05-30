@@ -106,4 +106,36 @@ class AuthController extends AsyncNotifier<void> {
       ref.read(userProvider.notifier).clearUser();
     });
   }
+
+  bool _expiredLogoutInProgress = false;
+
+  /// Auto-logout saat token/refresh-token tidak bisa di-recover (session habis).
+  /// Berbeda dari [logout]: TIDAK clear sync_queue supaya mutasi offline yang
+  /// belum terkirim tetap aman dan akan di-flush setelah user login ulang.
+  Future<void> logoutDueToSessionExpired() async {
+    if (_expiredLogoutInProgress) return;
+    if (ref.read(userProvider) == null) {
+      final hasToken = await ref.read(tokenStorageProvider).hasToken();
+      if (!hasToken) return;
+    }
+    _expiredLogoutInProgress = true;
+    try {
+      state = const AsyncValue.loading();
+      state = await AsyncValue.guard(() async {
+        final prefs = await SharedPreferences.getInstance();
+        await ref.read(tokenStorageProvider).clear();
+        await prefs.remove('user_data');
+        await prefs.remove('user_permissions');
+        await prefs.setBool('session_expired_flag', true);
+
+        final db = ref.read(appDatabaseProvider);
+        try { await db.clearAllDomainData(); } catch (e) { log('expiredLogout: clearAllDomainData failed: $e'); }
+        try { await db.clearAllCache(); } catch (e) { log('expiredLogout: clearAllCache failed: $e'); }
+
+        ref.read(userProvider.notifier).clearUser();
+      });
+    } finally {
+      _expiredLogoutInProgress = false;
+    }
+  }
 }

@@ -184,13 +184,14 @@ class _SalesTrackerAppState extends ConsumerState<SalesTrackerApp>
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     _triggerPreloadIfNeeded(user);
+    final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
       title: 'Sales Tracker',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       themeMode: ThemeMode.light,
-      routerConfig: appRouter,
+      routerConfig: router,
       builder: (context, child) {
         final media = MediaQuery.of(context);
         return MediaQuery(

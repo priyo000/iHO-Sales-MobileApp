@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sales_tracker_mobile/core/auth/auth_controller.dart';
 import 'package:sales_tracker_mobile/core/theme/app_colors.dart';
@@ -22,6 +24,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _maybeShowSessionExpiredSnackbar();
+    });
+  }
+
+  Future<void> _maybeShowSessionExpiredSnackbar() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('session_expired_flag') == true) {
+      await prefs.remove('session_expired_flag');
+      if (!mounted) return;
+      AppNotifications.showSnackBar(
+        context,
+        message: 'Sesi Anda telah berakhir. Silakan login ulang.',
+        isError: true,
+      );
+    }
+  }
 
   @override
   void dispose() {

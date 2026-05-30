@@ -47,11 +47,26 @@ class DioAuthException implements Exception {
 
 // ─── Token Storage ─────────────────────────────────────────────────────────────
 
+/// Result of a token refresh attempt — lets callers tell a genuine session
+/// expiry apart from a transient network failure.
+enum RefreshOutcome {
+  /// A new access token was obtained and stored.
+  success,
+
+  /// The server could not be reached (timeout, no connection) or returned 5xx.
+  /// The session may still be valid — retry later, do NOT log the user out.
+  networkError,
+
+  /// The server rejected the refresh token (4xx) or none was stored.
+  /// The session is genuinely over — the caller should log out.
+  authFailed,
+}
+
 class TokenStorage {
   static const _authTokenKey = 'auth_token';
   static const _refreshTokenKey = 'refresh_token';
 
-  Completer<bool>? _refreshCompleter;
+  Completer<RefreshOutcome>? _refreshCompleter;
 
   Future<String?> read() async {
     final prefs = await SharedPreferences.getInstance();
@@ -118,51 +133,73 @@ class TokenStorage {
 
   /// Refresh the auth token using the refresh token.
   /// Concurrent calls are coalesced — only one refresh runs at a time.
-  Future<bool> refreshToken(String refreshEndpoint) async {
-    if (_refreshCompleter != null) {
-      return _refreshCompleter!.future;
+  Future<RefreshOutcome> refreshToken(String refreshEndpoint) async {
+    final inFlight = _refreshCompleter;
+    if (inFlight != null) {
+      return inFlight.future;
     }
 
-    _refreshCompleter = Completer<bool>();
+    final completer = Completer<RefreshOutcome>();
+    _refreshCompleter = completer;
+    // Clear the reference only after every awaiter of this future has resumed,
+    // so a late caller never spawns a second refresh against a rotated token.
+    completer.future.whenComplete(() {
+      if (identical(_refreshCompleter, completer)) {
+        _refreshCompleter = null;
+      }
+    });
 
+    RefreshOutcome outcome;
     try {
       final refreshTokenVal = await readRefreshToken();
       if (refreshTokenVal == null || refreshTokenVal.isEmpty) {
-        _refreshCompleter!.complete(false);
-        return false;
-      }
+        outcome = RefreshOutcome.authFailed;
+      } else {
+        final dio = Dio();
+        final response = await dio.post(
+          refreshEndpoint,
+          data: jsonEncode({'refresh_token': refreshTokenVal}),
+          options: Options(
+            headers: {'Content-Type': 'application/json'},
+            // Inspect the status ourselves so 4xx surfaces as a value, not a throw.
+            validateStatus: (status) => status != null && status < 500,
+          ),
+        );
 
-      final dio = Dio();
-      final response = await dio.post(
-        refreshEndpoint,
-        data: jsonEncode({'refresh_token': refreshTokenVal}),
-        options: Options(headers: {'Content-Type': 'application/json'}),
-      );
+        final status = response.statusCode ?? 0;
+        if (status == 200) {
+          final data = response.data as Map<String, dynamic>;
+          final newToken =
+              data['token'] as String? ?? data['access_token'] as String?;
+          final newRefreshToken = data['refresh_token'] as String?;
 
-      if (response.statusCode == 200) {
-        final data = response.data as Map<String, dynamic>;
-        final newToken =
-            data['token'] as String? ?? data['access_token'] as String?;
-        final newRefreshToken = data['refresh_token'] as String?;
-
-        if (newToken != null) {
-          await write(newToken);
-          if (newRefreshToken != null) {
-            await writeRefreshToken(newRefreshToken);
+          if (newToken != null) {
+            await write(newToken);
+            if (newRefreshToken != null) {
+              await writeRefreshToken(newRefreshToken);
+            }
+            outcome = RefreshOutcome.success;
+          } else {
+            // 200 but malformed body — treat as transient, don't nuke the session.
+            outcome = RefreshOutcome.networkError;
           }
-          _refreshCompleter!.complete(true);
-          return true;
+        } else if (status >= 400 && status < 500) {
+          // Server actively rejected the refresh token — session is over.
+          outcome = RefreshOutcome.authFailed;
+        } else {
+          outcome = RefreshOutcome.networkError;
         }
       }
-      _refreshCompleter!.complete(false);
-      return false;
+    } on DioException catch (e) {
+      debugPrint('[TokenStorage] Token refresh network error: $e');
+      outcome = RefreshOutcome.networkError;
     } catch (e) {
       debugPrint('[TokenStorage] Token refresh failed: $e');
-      _refreshCompleter!.complete(false);
-      return false;
-    } finally {
-      _refreshCompleter = null;
+      outcome = RefreshOutcome.networkError;
     }
+
+    completer.complete(outcome);
+    return outcome;
   }
 
   Future<void> clear() async {
@@ -178,8 +215,10 @@ class DioClient {
   late final Dio _dio;
   final TokenStorage _tokenStorage;
 
-  DioClient({TokenStorage? tokenStorage})
-    : _tokenStorage = tokenStorage ?? TokenStorage() {
+  DioClient({
+    TokenStorage? tokenStorage,
+    VoidCallback? onAuthFailure,
+  }) : _tokenStorage = tokenStorage ?? TokenStorage() {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
@@ -198,7 +237,11 @@ class DioClient {
     // Add interceptors in order
     _dio.interceptors.addAll([
       // 1. Auth interceptor (add token, handle 401)
-      AuthInterceptor(_tokenStorage, _dio),
+      AuthInterceptor(
+        _tokenStorage,
+        _dio,
+        onAuthFailure: onAuthFailure,
+      ),
 
       // 2. Retry interceptor (linear backoff: 1s, 2s, 3s)
       RetryInterceptor(parentDio: _dio),
@@ -386,16 +429,37 @@ class AuthInterceptor extends Interceptor {
   final TokenStorage _tokenStorage;
   final Dio _dio;
 
-  AuthInterceptor(this._tokenStorage, this._dio);
+  /// Invoked once when a refresh is genuinely rejected by the server (session
+  /// over). Left null in the background isolate so background sync never wipes
+  /// the session — only the foreground app, which can show UI, logs the user out.
+  final VoidCallback? _onAuthFailure;
+
+  bool _failureNotified = false;
+
+  AuthInterceptor(
+    this._tokenStorage,
+    this._dio, {
+    VoidCallback? onAuthFailure,
+  }) : _onAuthFailure = onAuthFailure;
+
+  void _notifyAuthFailure() {
+    if (_failureNotified) return;
+    _failureNotified = true;
+    final cb = _onAuthFailure;
+    if (cb != null) {
+      Future.microtask(cb);
+    }
+  }
+
+  bool _isAuthExempt(String path) =>
+      path.contains('/login') || path.contains('/auth/refresh');
 
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Skip auth for login and refresh endpoints
-    final path = options.path;
-    if (path.contains('/login') || path.contains('/auth/refresh')) {
+    if (_isAuthExempt(options.path)) {
       handler.next(options);
       return;
     }
@@ -415,24 +479,44 @@ class AuthInterceptor extends Interceptor {
 
     if (_tokenStorage.isTokenExpiringSoon(token)) {
       debugPrint('[AuthInterceptor] Token expiring soon, proactive refresh...');
-      final refreshed = await _tokenStorage.refreshToken(
+      final outcome = await _tokenStorage.refreshToken(
         '${ApiConstants.baseUrl}/auth/refresh',
       );
-      if (refreshed) {
-        final newToken = await _tokenStorage.read();
-        options.headers['Authorization'] = 'Bearer $newToken';
-      } else if (_tokenStorage.isTokenFullyExpired(token)) {
-        debugPrint('[AuthInterceptor] Token fully expired and refresh failed');
-        handler.reject(
-          DioException(
-            requestOptions: options,
-            type: DioExceptionType.cancel,
-            error: 'Token expired and refresh failed',
-          ),
-        );
-        return;
-      } else {
-        options.headers['Authorization'] = 'Bearer $token';
+      switch (outcome) {
+        case RefreshOutcome.success:
+          final newToken = await _tokenStorage.read();
+          options.headers['Authorization'] = 'Bearer $newToken';
+        case RefreshOutcome.authFailed:
+          // Only give up if the current access token is also dead. If it still
+          // has life left, use it — refresh-token revocation shouldn't kill an
+          // otherwise-valid in-flight session early.
+          if (_tokenStorage.isTokenFullyExpired(token)) {
+            debugPrint('[AuthInterceptor] Refresh rejected & token expired → logout');
+            _notifyAuthFailure();
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.cancel,
+                error: 'Session expired',
+              ),
+            );
+            return;
+          }
+          options.headers['Authorization'] = 'Bearer $token';
+        case RefreshOutcome.networkError:
+          // Transient — proceed with the existing token if it hasn't expired,
+          // otherwise fail as a connection error (retryable, NOT a logout).
+          if (_tokenStorage.isTokenFullyExpired(token)) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.connectionError,
+                error: 'Token refresh unreachable',
+              ),
+            );
+            return;
+          }
+          options.headers['Authorization'] = 'Bearer $token';
       }
     } else {
       options.headers['Authorization'] = 'Bearer $token';
@@ -444,15 +528,14 @@ class AuthInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) async {
     if (response.statusCode == 401 &&
-        !response.requestOptions.path.contains('/auth/refresh') &&
-        !response.requestOptions.path.contains('/login')) {
+        !_isAuthExempt(response.requestOptions.path)) {
       debugPrint('[AuthInterceptor] 401 response, attempting token refresh...');
 
-      final refreshed = await _tokenStorage.refreshToken(
+      final outcome = await _tokenStorage.refreshToken(
         '${ApiConstants.baseUrl}/auth/refresh',
       );
 
-      if (refreshed) {
+      if (outcome == RefreshOutcome.success) {
         debugPrint('[AuthInterceptor] Token refreshed, retrying request');
         final opts = response.requestOptions;
         final token = await _tokenStorage.read();
@@ -465,13 +548,33 @@ class AuthInterceptor extends Interceptor {
           return handler.reject(
             e is DioException
                 ? e
-                : DioException(
-                    requestOptions: opts,
-                    error: e,
-                  ),
+                : DioException(requestOptions: opts, error: e),
           );
         }
       }
+
+      if (outcome == RefreshOutcome.networkError) {
+        // Couldn't reach the refresh endpoint — surface as a retryable
+        // connection error, do NOT log the user out.
+        return handler.reject(
+          DioException(
+            requestOptions: response.requestOptions,
+            type: DioExceptionType.connectionError,
+            error: 'Token refresh unreachable',
+          ),
+        );
+      }
+
+      // authFailed → genuine session expiry.
+      _notifyAuthFailure();
+      return handler.reject(
+        DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: 'Session expired',
+        ),
+      );
     }
 
     handler.next(response);
@@ -479,34 +582,29 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401) {
-      if (err.requestOptions.path.contains('/auth/refresh') ||
-          err.requestOptions.path.contains('/login')) {
-        handler.next(err);
-        return;
-      }
-
+    if (err.response?.statusCode == 401 &&
+        !_isAuthExempt(err.requestOptions.path)) {
       debugPrint('[AuthInterceptor] 401 error, attempting token refresh...');
 
-      try {
-        final refreshed = await _tokenStorage.refreshToken(
-          '${ApiConstants.baseUrl}/auth/refresh',
-        );
+      final outcome = await _tokenStorage.refreshToken(
+        '${ApiConstants.baseUrl}/auth/refresh',
+      );
 
-        if (refreshed) {
-          final opts = err.requestOptions;
-          final token = await _tokenStorage.read();
-          opts.headers['Authorization'] = 'Bearer $token';
+      if (outcome == RefreshOutcome.success) {
+        final opts = err.requestOptions;
+        final token = await _tokenStorage.read();
+        opts.headers['Authorization'] = 'Bearer $token';
 
-          try {
-            final response = await _dio.fetch(opts);
-            return handler.resolve(response);
-          } catch (e) {
-            return handler.next(e as DioException);
-          }
+        try {
+          final response = await _dio.fetch(opts);
+          return handler.resolve(response);
+        } catch (e) {
+          return handler.next(e is DioException ? e : err);
         }
-      } catch (e) {
-        debugPrint('[AuthInterceptor] Token refresh error: $e');
+      }
+
+      if (outcome == RefreshOutcome.authFailed) {
+        _notifyAuthFailure();
       }
     }
 
