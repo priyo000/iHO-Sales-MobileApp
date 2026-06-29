@@ -111,11 +111,15 @@ class PushNotificationService {
     }
 
     if (type == 'gamifikasi') {
-      ctx.push('/dashboard');
+      // Dashboard lives at /home inside the main shell.
+      ctx.go('/home');
     } else if (type == 'order' && id != null) {
-      ctx.push('/orders/$id');
+      // Order detail page expects an order map via `extra`. From a background
+      // notification tap we don't have the full order object, so route to the
+      // orders history tab where the user can open the order by id.
+      ctx.go('/orders');
     } else {
-      ctx.push('/notifications');
+      ctx.go('/notifications');
     }
   }
 

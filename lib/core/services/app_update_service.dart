@@ -31,7 +31,7 @@ class AppUpdateService extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
     try {
       final dio = DioClient();
       final response = await dio.get(
-        '${ApiConstants.baseUrl}/app-update/check',
+        ApiConstants.appUpdateCheck,
       );
       if (response != null &&
           response['status'] == 'success' &&

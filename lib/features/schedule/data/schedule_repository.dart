@@ -162,12 +162,16 @@ class ScheduleRepository {
       final queryParams = <String, dynamic>{};
       if (dateParam != null) queryParams['date'] = dateParam;
 
-      // Delta sync: only fetch changed since last sync
-      final lastModified = await _lastSync.getLastModified(
-        SyncResource.schedule,
-      );
-      if (lastModified != null) {
-        queryParams['since'] = lastModified;
+      // Delta sync: only fetch changed since last sync.
+      // A force refresh must NOT send `since` — it needs the full schedule
+      // snapshot for the requested date.
+      if (!forceRefresh) {
+        final lastModified = await _lastSync.getLastModified(
+          SyncResource.schedule,
+        );
+        if (lastModified != null) {
+          queryParams['since'] = lastModified;
+        }
       }
 
       final response = await _dio.get(

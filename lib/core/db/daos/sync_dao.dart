@@ -35,12 +35,14 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
     required String endpoint,
     required String method,
     required Map<String, dynamic> payload,
+    String? ownerKey,
   }) async {
     final pendingItems =
         await (select(syncQueueTable)..where(
               (t) =>
                   t.operation.equals(operation) &
                   t.endpoint.equals(endpoint) &
+                  _ownerPredicate(t, ownerKey) &
                   t.status.isIn(['pending', 'syncing', 'failed']),
             ))
             .get();
@@ -93,21 +95,51 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
         method: method,
         payload: jsonEncode(payload),
         createdAt: DateTime.now().millisecondsSinceEpoch,
+        ownerKey: Value(ownerKey),
       ),
     );
 
     return localRef;
   }
 
-  Future<List<SyncQueueTableData>> getAllQueueItems() async {
+  Expression<bool> _ownerPredicate($SyncQueueTableTable t, String? ownerKey) {
+    if (ownerKey == null || ownerKey.isEmpty) {
+      // Legacy queue rows created before owner tracking are still visible to
+      // avoid data loss. New sessions should stamp ownerKey on enqueue.
+      return t.ownerKey.isNull();
+    }
+    return t.ownerKey.equals(ownerKey) | t.ownerKey.isNull();
+  }
+
+  Future<List<SyncQueueTableData>> getAllQueueItems({String? ownerKey}) async {
     return await (select(syncQueueTable)
           ..where(
-            (t) => t.status.isIn([
-              'pending',
-              'failed',
-              'failed_permanently',
-              'cancelled_dependency',
-            ]),
+            (t) =>
+                _ownerPredicate(t, ownerKey) &
+                t.status.isIn([
+                  'pending',
+                  'failed',
+                  'failed_permanently',
+                  'cancelled_dependency',
+                ]),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .get();
+  }
+
+  Future<List<SyncQueueTableData>> getForeignQueueItems(String ownerKey) async {
+    return await (select(syncQueueTable)
+          ..where(
+            (t) =>
+                t.ownerKey.isNotNull() &
+                t.ownerKey.equals(ownerKey).not() &
+                t.status.isIn([
+                  'pending',
+                  'syncing',
+                  'failed',
+                  'failed_permanently',
+                  'cancelled_dependency',
+                ]),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
         .get();
@@ -135,11 +167,39 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
         .write(SyncQueueTableCompanion(payload: Value(jsonEncode(newPayload))));
   }
 
-  Future<void> incrementRetry(String localRef) async {
-    await customStatement(
-      'UPDATE sync_queue_table SET retry_count = retry_count + 1 WHERE local_ref = ?',
-      [localRef],
+  Future<void> updateEndpointAndPayload(
+    String localRef, {
+    required String endpoint,
+    required Map<String, dynamic> payload,
+  }) async {
+    await (update(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
+        .write(
+      SyncQueueTableCompanion(
+        endpoint: Value(endpoint),
+        payload: Value(jsonEncode(payload)),
+      ),
     );
+  }
+
+  Future<void> resetRetryAndMarkPending(String localRef) async {
+    await (update(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
+        .write(
+      const SyncQueueTableCompanion(
+        retryCount: Value(0),
+        status: Value('pending'),
+        errorMessage: Value(null),
+      ),
+    );
+  }
+
+  Future<int> incrementRetry(String localRef) async {
+    final row = await (select(syncQueueTable)
+          ..where((t) => t.localRef.equals(localRef)))
+        .getSingleOrNull();
+    final nextRetry = (row?.retryCount ?? 0) + 1;
+    await (update(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
+        .write(SyncQueueTableCompanion(retryCount: Value(nextRetry)));
+    return nextRetry;
   }
 
   Future<void> resetForRetry(String localRef) async {

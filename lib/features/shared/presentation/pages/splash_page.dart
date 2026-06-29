@@ -51,13 +51,19 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
       debugPrint('Startup: Checking auth status...');
       final prefs = await SharedPreferences.getInstance();
-      final hasToken = await ref.read(tokenStorageProvider).hasToken();
+      final tokenStorage = ref.read(tokenStorageProvider);
+      final hasAccessToken = await tokenStorage.hasToken();
+      final hasRefreshToken = await tokenStorage.readRefreshToken() != null;
+      // A cached user alone is NOT sufficient to enter protected routes —
+      // there must be a usable credential (access or refresh token) so the
+      // app can actually authenticate API calls. Cached user only hydrates UI.
+      final hasCredential = hasAccessToken || hasRefreshToken;
       final cachedUserStr = prefs.getString('user_data') ?? '';
       final hasCachedUser = cachedUserStr.isNotEmpty;
       final user = ref.read(userProvider);
-      final isAuthenticated = hasToken || hasCachedUser || user != null;
+      final isAuthenticated = hasCredential && (hasCachedUser || user != null);
       debugPrint(
-        'Startup: Auth state token=$hasToken cachedUser=$hasCachedUser providerUser=${user != null}',
+        'Startup: Auth state accessToken=$hasAccessToken refreshToken=$hasRefreshToken cachedUser=$hasCachedUser providerUser=${user != null} → authenticated=$isAuthenticated',
       );
 
       if (mounted) {

@@ -39,3 +39,24 @@ final allowOpenPriceProvider = Provider<bool>((ref) {
   if (divisi == null) return true;
   return divisi['allow_open_price'] as bool? ?? true;
 });
+
+/// Build a stable, opaque owner key for the cached user session.
+///
+/// Used to stamp offline sync-queue mutations so a queue created by one login
+/// is never silently flushed under a different user's credentials on the same
+/// device. Format is versioned (`v1|...`) so it can evolve without colliding
+/// with legacy null-owned rows.
+String? buildSyncOwnerKey(Map<String, dynamic>? user) {
+  if (user == null) return null;
+  final companyId = user['id_perusahaan']?.toString() ??
+      user['company_id']?.toString() ??
+      user['companyId']?.toString();
+  final divisionId = user['karyawan']?['id_divisi']?.toString() ??
+      user['id_divisi']?.toString() ??
+      user['divisionId']?.toString();
+  final userId = user['id']?.toString() ??
+      user['karyawan']?['id']?.toString() ??
+      user['employee_id']?.toString();
+  if (companyId == null && divisionId == null && userId == null) return null;
+  return 'v1|$companyId|$divisionId|$userId';
+}

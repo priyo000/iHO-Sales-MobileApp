@@ -719,6 +719,17 @@ class $SyncQueueTableTable extends SyncQueueTable
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -733,6 +744,7 @@ class $SyncQueueTableTable extends SyncQueueTable
     errorMessage,
     lastServerId,
     serverSyncedAt,
+    ownerKey,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -836,6 +848,12 @@ class $SyncQueueTableTable extends SyncQueueTable
         ),
       );
     }
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    }
     return context;
   }
 
@@ -893,6 +911,10 @@ class $SyncQueueTableTable extends SyncQueueTable
         DriftSqlType.int,
         data['${effectivePrefix}server_synced_at'],
       ),
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      ),
     );
   }
 
@@ -916,6 +938,11 @@ class SyncQueueTableData extends DataClass
   final String? errorMessage;
   final String? lastServerId;
   final int? serverSyncedAt;
+
+  /// Stable owner key for preventing offline mutations from being flushed by
+  /// a different login session on the same device. Format is intentionally
+  /// opaque and versionable; current value is built from company/division/user.
+  final String? ownerKey;
   const SyncQueueTableData({
     required this.id,
     required this.localRef,
@@ -929,6 +956,7 @@ class SyncQueueTableData extends DataClass
     this.errorMessage,
     this.lastServerId,
     this.serverSyncedAt,
+    this.ownerKey,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -950,6 +978,9 @@ class SyncQueueTableData extends DataClass
     }
     if (!nullToAbsent || serverSyncedAt != null) {
       map['server_synced_at'] = Variable<int>(serverSyncedAt);
+    }
+    if (!nullToAbsent || ownerKey != null) {
+      map['owner_key'] = Variable<String>(ownerKey);
     }
     return map;
   }
@@ -974,6 +1005,9 @@ class SyncQueueTableData extends DataClass
       serverSyncedAt: serverSyncedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(serverSyncedAt),
+      ownerKey: ownerKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerKey),
     );
   }
 
@@ -995,6 +1029,7 @@ class SyncQueueTableData extends DataClass
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
       lastServerId: serializer.fromJson<String?>(json['lastServerId']),
       serverSyncedAt: serializer.fromJson<int?>(json['serverSyncedAt']),
+      ownerKey: serializer.fromJson<String?>(json['ownerKey']),
     );
   }
   @override
@@ -1013,6 +1048,7 @@ class SyncQueueTableData extends DataClass
       'errorMessage': serializer.toJson<String?>(errorMessage),
       'lastServerId': serializer.toJson<String?>(lastServerId),
       'serverSyncedAt': serializer.toJson<int?>(serverSyncedAt),
+      'ownerKey': serializer.toJson<String?>(ownerKey),
     };
   }
 
@@ -1029,6 +1065,7 @@ class SyncQueueTableData extends DataClass
     Value<String?> errorMessage = const Value.absent(),
     Value<String?> lastServerId = const Value.absent(),
     Value<int?> serverSyncedAt = const Value.absent(),
+    Value<String?> ownerKey = const Value.absent(),
   }) => SyncQueueTableData(
     id: id ?? this.id,
     localRef: localRef ?? this.localRef,
@@ -1044,6 +1081,7 @@ class SyncQueueTableData extends DataClass
     serverSyncedAt: serverSyncedAt.present
         ? serverSyncedAt.value
         : this.serverSyncedAt,
+    ownerKey: ownerKey.present ? ownerKey.value : this.ownerKey,
   );
   SyncQueueTableData copyWithCompanion(SyncQueueTableCompanion data) {
     return SyncQueueTableData(
@@ -1067,6 +1105,7 @@ class SyncQueueTableData extends DataClass
       serverSyncedAt: data.serverSyncedAt.present
           ? data.serverSyncedAt.value
           : this.serverSyncedAt,
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
     );
   }
 
@@ -1084,7 +1123,8 @@ class SyncQueueTableData extends DataClass
           ..write('status: $status, ')
           ..write('errorMessage: $errorMessage, ')
           ..write('lastServerId: $lastServerId, ')
-          ..write('serverSyncedAt: $serverSyncedAt')
+          ..write('serverSyncedAt: $serverSyncedAt, ')
+          ..write('ownerKey: $ownerKey')
           ..write(')'))
         .toString();
   }
@@ -1103,6 +1143,7 @@ class SyncQueueTableData extends DataClass
     errorMessage,
     lastServerId,
     serverSyncedAt,
+    ownerKey,
   );
   @override
   bool operator ==(Object other) =>
@@ -1119,7 +1160,8 @@ class SyncQueueTableData extends DataClass
           other.status == this.status &&
           other.errorMessage == this.errorMessage &&
           other.lastServerId == this.lastServerId &&
-          other.serverSyncedAt == this.serverSyncedAt);
+          other.serverSyncedAt == this.serverSyncedAt &&
+          other.ownerKey == this.ownerKey);
 }
 
 class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
@@ -1135,6 +1177,7 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
   final Value<String?> errorMessage;
   final Value<String?> lastServerId;
   final Value<int?> serverSyncedAt;
+  final Value<String?> ownerKey;
   const SyncQueueTableCompanion({
     this.id = const Value.absent(),
     this.localRef = const Value.absent(),
@@ -1148,6 +1191,7 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
     this.errorMessage = const Value.absent(),
     this.lastServerId = const Value.absent(),
     this.serverSyncedAt = const Value.absent(),
+    this.ownerKey = const Value.absent(),
   });
   SyncQueueTableCompanion.insert({
     this.id = const Value.absent(),
@@ -1162,6 +1206,7 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
     this.errorMessage = const Value.absent(),
     this.lastServerId = const Value.absent(),
     this.serverSyncedAt = const Value.absent(),
+    this.ownerKey = const Value.absent(),
   }) : localRef = Value(localRef),
        operation = Value(operation),
        endpoint = Value(endpoint),
@@ -1181,6 +1226,7 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
     Expression<String>? errorMessage,
     Expression<String>? lastServerId,
     Expression<int>? serverSyncedAt,
+    Expression<String>? ownerKey,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1195,6 +1241,7 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
       if (errorMessage != null) 'error_message': errorMessage,
       if (lastServerId != null) 'last_server_id': lastServerId,
       if (serverSyncedAt != null) 'server_synced_at': serverSyncedAt,
+      if (ownerKey != null) 'owner_key': ownerKey,
     });
   }
 
@@ -1211,6 +1258,7 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
     Value<String?>? errorMessage,
     Value<String?>? lastServerId,
     Value<int?>? serverSyncedAt,
+    Value<String?>? ownerKey,
   }) {
     return SyncQueueTableCompanion(
       id: id ?? this.id,
@@ -1225,6 +1273,7 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
       errorMessage: errorMessage ?? this.errorMessage,
       lastServerId: lastServerId ?? this.lastServerId,
       serverSyncedAt: serverSyncedAt ?? this.serverSyncedAt,
+      ownerKey: ownerKey ?? this.ownerKey,
     );
   }
 
@@ -1267,6 +1316,9 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
     if (serverSyncedAt.present) {
       map['server_synced_at'] = Variable<int>(serverSyncedAt.value);
     }
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
     return map;
   }
 
@@ -1284,7 +1336,8 @@ class SyncQueueTableCompanion extends UpdateCompanion<SyncQueueTableData> {
           ..write('status: $status, ')
           ..write('errorMessage: $errorMessage, ')
           ..write('lastServerId: $lastServerId, ')
-          ..write('serverSyncedAt: $serverSyncedAt')
+          ..write('serverSyncedAt: $serverSyncedAt, ')
+          ..write('ownerKey: $ownerKey')
           ..write(')'))
         .toString();
   }
@@ -10146,6 +10199,7 @@ typedef $$SyncQueueTableTableCreateCompanionBuilder =
       Value<String?> errorMessage,
       Value<String?> lastServerId,
       Value<int?> serverSyncedAt,
+      Value<String?> ownerKey,
     });
 typedef $$SyncQueueTableTableUpdateCompanionBuilder =
     SyncQueueTableCompanion Function({
@@ -10161,6 +10215,7 @@ typedef $$SyncQueueTableTableUpdateCompanionBuilder =
       Value<String?> errorMessage,
       Value<String?> lastServerId,
       Value<int?> serverSyncedAt,
+      Value<String?> ownerKey,
     });
 
 class $$SyncQueueTableTableFilterComposer
@@ -10229,6 +10284,11 @@ class $$SyncQueueTableTableFilterComposer
 
   ColumnFilters<int> get serverSyncedAt => $composableBuilder(
     column: $table.serverSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10301,6 +10361,11 @@ class $$SyncQueueTableTableOrderingComposer
     column: $table.serverSyncedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncQueueTableTableAnnotationComposer
@@ -10355,6 +10420,9 @@ class $$SyncQueueTableTableAnnotationComposer
     column: $table.serverSyncedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
 }
 
 class $$SyncQueueTableTableTableManager
@@ -10406,6 +10474,7 @@ class $$SyncQueueTableTableTableManager
                 Value<String?> errorMessage = const Value.absent(),
                 Value<String?> lastServerId = const Value.absent(),
                 Value<int?> serverSyncedAt = const Value.absent(),
+                Value<String?> ownerKey = const Value.absent(),
               }) => SyncQueueTableCompanion(
                 id: id,
                 localRef: localRef,
@@ -10419,6 +10488,7 @@ class $$SyncQueueTableTableTableManager
                 errorMessage: errorMessage,
                 lastServerId: lastServerId,
                 serverSyncedAt: serverSyncedAt,
+                ownerKey: ownerKey,
               ),
           createCompanionCallback:
               ({
@@ -10434,6 +10504,7 @@ class $$SyncQueueTableTableTableManager
                 Value<String?> errorMessage = const Value.absent(),
                 Value<String?> lastServerId = const Value.absent(),
                 Value<int?> serverSyncedAt = const Value.absent(),
+                Value<String?> ownerKey = const Value.absent(),
               }) => SyncQueueTableCompanion.insert(
                 id: id,
                 localRef: localRef,
@@ -10447,6 +10518,7 @@ class $$SyncQueueTableTableTableManager
                 errorMessage: errorMessage,
                 lastServerId: lastServerId,
                 serverSyncedAt: serverSyncedAt,
+                ownerKey: ownerKey,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

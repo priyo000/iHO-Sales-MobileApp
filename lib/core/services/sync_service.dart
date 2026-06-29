@@ -5,11 +5,13 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db/app_database.dart';
 import '../providers/database_providers.dart';
 import 'connectivity_service.dart';
 import 'offline_photo_service.dart';
+import '../auth/user_provider.dart';
 import '../network/dio_client.dart' show DioAuthException, OfflineException, ServerException;
 import 'sync/sync_exceptions.dart';
 
@@ -226,6 +228,7 @@ class SyncService {
       'error_message': item.errorMessage,
       'last_server_id': item.lastServerId,
       'server_synced_at': item.serverSyncedAt,
+      'owner_key': item.ownerKey,
     };
   }
 
@@ -257,10 +260,7 @@ class SyncService {
     await _localDb.syncDao.updatePayload(localRef, newPayload);
 
     // Setelah diupdate, reset error state dan jadikan pending
-    await _localDb.rawUpdate(
-      'UPDATE ${AppDatabase.tableSyncQueue} SET retry_count = 0, status = ?, error_message = NULL WHERE local_ref = ?',
-      whereArgs: ['pending', localRef],
-    );
+    await _localDb.syncDao.resetRetryAndMarkPending(localRef);
 
     // Aktifkan juga child/dependency-nya jika ada yang ke-cancel
     // karena sebelumnya parent gagal permanen.
@@ -288,10 +288,7 @@ class SyncService {
       }
 
       if (isDependent) {
-        await _localDb.rawUpdate(
-          'UPDATE ${AppDatabase.tableSyncQueue} SET status = ?, error_message = NULL, retry_count = 0 WHERE local_ref = ?',
-          whereArgs: ['pending', currentRef],
-        );
+        await _localDb.syncDao.resetRetryAndMarkPending(currentRef);
         log(
           '[SyncService] ♻️ Memulihkan dependency $currentRef karena parent direvisi.',
         );
@@ -319,6 +316,30 @@ class SyncService {
         syncAll();
       }
     });
+  }
+
+  Future<String?> _currentOwnerKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('user_data');
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final user = jsonDecode(raw) as Map<String, dynamic>;
+      return buildSyncOwnerKey(user);
+    } catch (e) {
+      log('[SyncService] Failed to build owner key from cached user: $e');
+      return null;
+    }
+  }
+
+  Future<bool> _hasForeignOwnedQueue(String ownerKey) async {
+    final foreign = await _localDb.syncDao.getForeignQueueItems(ownerKey);
+    if (foreign.isNotEmpty) {
+      log(
+        '[SyncService] ⛔ Found ${foreign.length} queue items owned by a different session. They will not be synced by this user.',
+      );
+      return true;
+    }
+    return false;
   }
 
   // ── Core Sync Function ────────────────────────────────────────────────────
@@ -351,12 +372,19 @@ class SyncService {
         return;
       }
 
+      final ownerKey = await _currentOwnerKey();
+      if (ownerKey == null) {
+        log('[SyncService] No active user owner key, skip sync.');
+        return;
+      }
+      await _hasForeignOwnedQueue(ownerKey);
+
       log('[SyncService] Memulai siklus sinkronisasi...');
 
       while (true) {
         // Ambil antrean terbaru setiap iterasi untuk menghindari data "basi" (stale)
         // terutama setelah item sebelumnya di-patch IDs-nya.
-        final queue = await _localDb.syncDao.getAllQueueItems();
+        final queue = await _localDb.syncDao.getAllQueueItems(ownerKey: ownerKey);
 
         // DEBUG: Log semua queue item yang tersedia
         log('[SyncService] 📋 Queue snapshot: ${queue.length} items');
@@ -419,14 +447,14 @@ class SyncService {
           // Convert SyncQueueTableData to Map for _processItem
           final itemMap = _syncQueueItemToMap(item);
           final dynamic response = await _processItem(itemMap);
-          // Mark as synced by server BEFORE removing from queue
-          // This prevents duplicate sync if app is killed/restarted
-          await _localDb.markServerSynced(localRef);
-          await _localDb.syncDao.removeFromQueue(localRef);
+          await _localDb.transaction(() async {
+            await _finalizeSyncSuccess(item, response);
+            await _localDb.syncDao.markServerSynced(localRef);
+            await _localDb.syncDao.removeFromQueue(localRef);
+          });
           _deferCount.remove(localRef);
           log('[SyncService] ✅ $localRef berhasil disinkronkan.');
-
-          await _finalizeSyncSuccess(item, response);
+          await _broadcastPendingCount();
         } on SyncDeferredException catch (e) {
           final defers = (_deferCount[localRef] ?? 0) + 1;
           _deferCount[localRef] = defers;
@@ -493,16 +521,28 @@ class SyncService {
           final isRateLimited = e.statusCode == 429 || e.statusCode == 503;
 
           if (isServerError || isRateLimited) {
-            final backoff = _calculateBackoffDelay(retryCount);
+            final nextRetry = await _localDb.syncDao.incrementRetry(localRef);
+            final backoff = _calculateBackoffDelay(nextRetry);
+            if (nextRetry >= _maxRetry) {
+              log('[SyncService] ❌ $localRef server error (${e.statusCode}) after $_maxRetry retries: $e');
+              await _localDb.syncDao.updateQueueStatus(
+                localRef,
+                'failed_permanently',
+                errorMessage:
+                    'Server error (${e.statusCode}) after $_maxRetry retries: ${e.message}',
+              );
+              await _broadcastPendingCount();
+              continue;
+            }
             log(
               '[SyncService] ⚠️ Server/RateLimit Error (${e.statusCode}): '
-              '${e.message}. Retry setelah ${backoff.inSeconds}s.',
+              '${e.message}. Retry $nextRetry/$_maxRetry setelah ${backoff.inSeconds}s.',
             );
             await _localDb.syncDao.updateQueueStatus(
               localRef,
               'pending',
               errorMessage:
-                  'Server error (${e.statusCode}) — retry setelah ${backoff.inSeconds}s',
+                  'Server error (${e.statusCode}) — retry $nextRetry/$_maxRetry setelah ${backoff.inSeconds}s',
             );
             await _broadcastPendingCount();
             await Future.delayed(backoff);
@@ -536,8 +576,8 @@ class SyncService {
           }
 
           // Unknown / non-HTTP errors → bounded retry
-          await _localDb.syncDao.incrementRetry(localRef);
-          if (retryCount + 1 >= _maxRetry) {
+          final nextRetry = await _localDb.syncDao.incrementRetry(localRef);
+          if (nextRetry >= _maxRetry) {
             log('[SyncService] ❌ $localRef gagal permanen setelah $_maxRetry retry: $e');
             await _localDb.syncDao.updateQueueStatus(
               localRef,
@@ -832,11 +872,13 @@ class SyncService {
     Map<String, dynamic> payload = const {},
     bool triggerSync = false,
   }) async {
+    final ownerKey = await _currentOwnerKey();
     final ref = await _localDb.syncDao.enqueue(
       operation: operation,
       endpoint: endpoint,
       method: method,
       payload: payload,
+      ownerKey: ownerKey,
     );
     await _broadcastPendingCount();
     if (triggerSync) syncAll();
@@ -943,11 +985,13 @@ class SyncService {
     required String endpoint,
     required Map<String, dynamic> payload,
   }) async {
+    final ownerKey = await _currentOwnerKey();
     final localRef = await _localDb.syncDao.enqueue(
       operation: 'create_pelanggan',
       endpoint: endpoint,
       method: 'POST',
       payload: payload,
+      ownerKey: ownerKey,
     );
     await _broadcastPendingCount();
 
@@ -1282,9 +1326,10 @@ class SyncService {
       }
 
       if (changed) {
-        await _localDb.rawUpdate(
-          'UPDATE ${AppDatabase.tableSyncQueue} SET endpoint = ?, payload = ? WHERE local_ref = ?',
-          whereArgs: [endpoint, jsonEncode(payload), currentRef],
+        await _localDb.syncDao.updateEndpointAndPayload(
+          currentRef,
+          endpoint: endpoint,
+          payload: payload,
         );
         log(
           '[SyncService] 🪄 Patched $currentRef: Replace ${refsToPatch.join(', ')} → $resolvedServerId',

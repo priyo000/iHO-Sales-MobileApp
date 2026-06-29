@@ -67,6 +67,10 @@ class SyncQueueTable extends Table {
   TextColumn get errorMessage => text().nullable()();
   TextColumn get lastServerId => text().nullable()();
   IntColumn get serverSyncedAt => integer().nullable()();
+  /// Stable owner key for preventing offline mutations from being flushed by
+  /// a different login session on the same device. Format is intentionally
+  /// opaque and versionable; current value is built from company/division/user.
+  TextColumn get ownerKey => text().nullable()();
 }
 
 /// Reference ID mapping (local_ref → server_id) - permanent storage
@@ -372,7 +376,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration {
@@ -381,58 +385,46 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // v21: Add localPhotoPaths to visits_table to retain checkout photos
-        // locally after sync (for offline review in Riwayat Kunjungan sheet).
-        if (from == 20) {
-          await customStatement(
-              'ALTER TABLE visits_table ADD COLUMN local_photo_paths TEXT');
-          return;
-        }
-        // v20: Add clientRef to customers_table for robust offline dedup
-        if (from == 19) {
-          await customStatement('ALTER TABLE customers_table ADD COLUMN client_ref TEXT');
-          await customStatement(
-              'ALTER TABLE visits_table ADD COLUMN local_photo_paths TEXT');
-          return;
-        }
-        // v19: Add namaRute to schedule_table for dashboard route name display
-        if (from == 18) {
-          await customStatement('ALTER TABLE schedule_table ADD COLUMN nama_rute TEXT');
-          await customStatement('ALTER TABLE customers_table ADD COLUMN client_ref TEXT');
-          return;
-        }
-        // v18: Add createdById to customers_table for SSOT "Pelanggan Baru" filtering
-        if (from == 17) {
-          await customStatement('ALTER TABLE customers_table ADD COLUMN created_by_id TEXT');
-          return;
-        }
-        // v17: Multi-unit product support — add ProductUnitsTable + cart unit columns
-        if (from == 16) {
-          await m.createTable(productUnitsTable);
-          await customStatement('ALTER TABLE cart_items_table ADD COLUMN unit_id TEXT');
-          await customStatement('ALTER TABLE cart_items_table ADD COLUMN unit_name TEXT');
-          return;
-        }
-        // v16: UUID migration — all ID columns changed from INTEGER to TEXT.
-        // Destructive: drop ALL tables and recreate. Data re-syncs from server.
+        // v16: UUID migration — all domain ID columns changed from INTEGER to
+        // TEXT. Domain SSOT data can be re-synced from the server, but local
+        // sync infrastructure must be preserved whenever possible so offline
+        // mutations are not silently lost.
         if (from < 16) {
-          await customStatement('DROP TABLE IF EXISTS customers_table');
-          await customStatement('DROP TABLE IF EXISTS products_table');
-          await customStatement('DROP TABLE IF EXISTS categories_table');
-          await customStatement('DROP TABLE IF EXISTS schedule_table');
-          await customStatement('DROP TABLE IF EXISTS promo_table');
-          await customStatement('DROP TABLE IF EXISTS notifications_table');
-          await customStatement('DROP TABLE IF EXISTS visits_table');
-          await customStatement('DROP TABLE IF EXISTS orders_table');
-          await customStatement('DROP TABLE IF EXISTS cart_items_table');
-          await customStatement('DROP TABLE IF EXISTS promo_cache_table');
-          await customStatement('DROP TABLE IF EXISTS sync_queue_table');
-          await customStatement('DROP TABLE IF EXISTS ref_id_map_table');
-          await customStatement('DROP TABLE IF EXISTS sync_lock_table');
-          await m.createAll();
-          return;
+          await _dropAndRecreateDomainSsotTables(m);
         }
-        await _dropAndRecreateSsotTables(m);
+
+        // v17: Multi-unit product support.
+        if (from < 17) {
+          await _createTableIfMissing(m, productUnitsTable, tableProductUnits);
+          await _addColumnIfMissing(tableCartItems, 'unit_id', 'TEXT');
+          await _addColumnIfMissing(tableCartItems, 'unit_name', 'TEXT');
+        }
+
+        // v18: Add createdById to customers_table for SSOT "Pelanggan Baru" filtering.
+        if (from < 18) {
+          await _addColumnIfMissing(tableCustomers, 'created_by_id', 'TEXT');
+        }
+
+        // v19: Add namaRute to schedule_table for dashboard route name display.
+        if (from < 19) {
+          await _addColumnIfMissing(tableSchedule, 'nama_rute', 'TEXT');
+        }
+
+        // v20: Add clientRef to customers_table for robust offline dedup.
+        if (from < 20) {
+          await _addColumnIfMissing(tableCustomers, 'client_ref', 'TEXT');
+        }
+
+        // v21: Retain checkout photos locally after sync.
+        if (from < 21) {
+          await _addColumnIfMissing(tableVisits, 'local_photo_paths', 'TEXT');
+        }
+
+        // v22: Owner guard for offline queue items.
+        if (from < 22) {
+          await _addColumnIfMissing(tableSyncQueue, 'owner_key', 'TEXT');
+        }
+
         await _ensureSsotTables();
       },
       beforeOpen: (OpeningDetails details) async {
@@ -441,10 +433,37 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Drop & recreate ALL Drift-managed domain tables to fix missing-column issues
-  /// from incomplete migrations. Safe because all domain data is re-synced from server.
-  Future<void> _dropAndRecreateSsotTables(Migrator m) async {
-    // Domain SSOT tables — always synced from server, safe to drop.
+  Future<void> _addColumnIfMissing(
+    String tableName,
+    String columnName,
+    String columnDefinition,
+  ) async {
+    final existing = await customSelect('PRAGMA table_info($tableName)').get();
+    final hasColumn = existing.any((row) => row.data['name'] == columnName);
+    if (!hasColumn) {
+      await customStatement(
+        'ALTER TABLE $tableName ADD COLUMN $columnName $columnDefinition',
+      );
+    }
+  }
+
+  Future<void> _createTableIfMissing(
+    Migrator m,
+    TableInfo table,
+    String tableName,
+  ) async {
+    final existing = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable.withString(tableName)],
+    ).getSingleOrNull();
+    if (existing == null) {
+      await m.createTable(table);
+    }
+  }
+
+  /// Drop & recreate server-backed domain tables. Intentionally preserves sync
+  /// queue/ref-map/locks so offline mutations survive app upgrades.
+  Future<void> _dropAndRecreateDomainSsotTables(Migrator m) async {
     await customStatement('DROP TABLE IF EXISTS customers_table');
     await customStatement('DROP TABLE IF EXISTS products_table');
     await customStatement('DROP TABLE IF EXISTS product_units_table');
@@ -456,9 +475,25 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('DROP TABLE IF EXISTS orders_table');
     await customStatement('DROP TABLE IF EXISTS local_cache_table');
     await customStatement('DROP TABLE IF EXISTS sync_metadata_table');
+    await customStatement('DROP TABLE IF EXISTS cart_items_table');
+    await customStatement('DROP TABLE IF EXISTS promo_cache_table');
 
-    // Recreate all Drift tables (includes newly added columns)
-    await m.createAll();
+    await _createTableIfMissing(m, localCacheTable, tableCache);
+    await _createTableIfMissing(m, syncMetadataTable, tableSyncMeta);
+    await _createTableIfMissing(m, syncQueueTable, tableSyncQueue);
+    await _createTableIfMissing(m, refIdMapTable, tableRefIdMap);
+    await _createTableIfMissing(m, syncLockTable, tableSyncLock);
+    await _createTableIfMissing(m, cartItemsTable, tableCartItems);
+    await _createTableIfMissing(m, promoCacheTable, tablePromoCache);
+    await _createTableIfMissing(m, visitsTable, tableVisits);
+    await _createTableIfMissing(m, ordersTable, tableOrders);
+    await _createTableIfMissing(m, customersTable, tableCustomers);
+    await _createTableIfMissing(m, productUnitsTable, tableProductUnits);
+    await _createTableIfMissing(m, productsTable, tableProducts);
+    await _createTableIfMissing(m, categoriesTable, tableCategories);
+    await _createTableIfMissing(m, scheduleTable, tableSchedule);
+    await _createTableIfMissing(m, promoTable, tablePromo);
+    await _createTableIfMissing(m, notificationsTable, tableNotifications);
   }
 
   Future<void> _ensureSsotTables() async {
@@ -669,18 +704,28 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  Future<List<SyncQueueTableData>> getAllQueueItems() async {
+  Future<List<SyncQueueTableData>> getAllQueueItems({String? ownerKey}) async {
     return await (select(syncQueueTable)
           ..where(
-            (t) => t.status.isIn([
-              'pending',
-              'failed',
-              'failed_permanently',
-              'cancelled_dependency',
-            ]),
+            (t) =>
+                _queueOwnerPredicate(t, ownerKey) &
+                t.status.isIn([
+                  'pending',
+                  'failed',
+                  'failed_permanently',
+                  'cancelled_dependency',
+                ]),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
         .get();
+  }
+
+  Expression<bool> _queueOwnerPredicate(
+    $SyncQueueTableTable t,
+    String? ownerKey,
+  ) {
+    if (ownerKey == null || ownerKey.isEmpty) return t.ownerKey.isNull();
+    return t.ownerKey.equals(ownerKey) | t.ownerKey.isNull();
   }
 
   /// Get sync queue items by operation type. Used by delta-sync guards to
@@ -689,6 +734,7 @@ class AppDatabase extends _$AppDatabase {
   Future<List<SyncQueueTableData>> getPendingByOperation(
     String operation, {
     bool includeInFlight = true,
+    String? ownerKey,
   }) async {
     final statuses = includeInFlight
         ? const [
@@ -701,7 +747,10 @@ class AppDatabase extends _$AppDatabase {
         : const ['pending', 'failed', 'failed_permanently', 'cancelled_dependency'];
     return await (select(syncQueueTable)
           ..where(
-            (t) => t.operation.equals(operation) & t.status.isIn(statuses),
+            (t) =>
+                t.operation.equals(operation) &
+                _queueOwnerPredicate(t, ownerKey) &
+                t.status.isIn(statuses),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
         .get();
@@ -730,11 +779,39 @@ class AppDatabase extends _$AppDatabase {
         .write(SyncQueueTableCompanion(payload: Value(jsonEncode(newPayload))));
   }
 
-  Future<void> incrementRetry(String localRef) async {
-    await customStatement(
-      'UPDATE sync_queue_table SET retry_count = retry_count + 1 WHERE local_ref = ?',
-      [localRef],
+  Future<void> updateEndpointAndPayload(
+    String localRef, {
+    required String endpoint,
+    required Map<String, dynamic> payload,
+  }) async {
+    await (update(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
+        .write(
+      SyncQueueTableCompanion(
+        endpoint: Value(endpoint),
+        payload: Value(jsonEncode(payload)),
+      ),
     );
+  }
+
+  Future<void> resetRetryAndMarkPending(String localRef) async {
+    await (update(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
+        .write(
+      const SyncQueueTableCompanion(
+        retryCount: Value(0),
+        status: Value('pending'),
+        errorMessage: Value(null),
+      ),
+    );
+  }
+
+  Future<int> incrementRetry(String localRef) async {
+    final row = await (select(syncQueueTable)
+          ..where((t) => t.localRef.equals(localRef)))
+        .getSingleOrNull();
+    final nextRetry = (row?.retryCount ?? 0) + 1;
+    await (update(syncQueueTable)..where((t) => t.localRef.equals(localRef)))
+        .write(SyncQueueTableCompanion(retryCount: Value(nextRetry)));
+    return nextRetry;
   }
 
   Future<void> removeFromQueue(String localRef) async {
@@ -2219,6 +2296,23 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteUnitsForProduct(String productId) {
     return (delete(productUnitsTable)
           ..where((t) => t.productId.equals(productId)))
+        .go();
+  }
+
+  /// Delete units for [productId] whose id is NOT in [keepUnitIds].
+  /// Used to reconcile stale units removed on the server during a full sync.
+  Future<void> deleteUnitsForProductExcept(
+    String productId,
+    Set<String> keepUnitIds,
+  ) {
+    return (delete(productUnitsTable)
+          ..where(
+            (t) =>
+                t.productId.equals(productId) &
+                (keepUnitIds.isEmpty
+                    ? const Constant(true)
+                    : t.id.isNotIn(keepUnitIds)),
+          ))
         .go();
   }
 

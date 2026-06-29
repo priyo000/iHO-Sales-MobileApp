@@ -48,9 +48,14 @@ const _kLastPreloadKey = 'meta_last_preload';
 const _kLastProductPreloadKey = 'meta_last_product_preload';
 const _kLastCustomerPreloadKey = 'meta_last_customer_preload';
 const _kLastPromoPreloadKey = 'meta_last_promo_preload';
+const _kLastVolatilePreloadKey = 'meta_last_volatile_preload';
 
-// Auto-sync threshold: 24 jam — jika last sync > 24 jam, auto sync diam-diam saat app dibuka
+// Auto-sync thresholds. Foundational data (schedule/products/customers) is
+// relatively stable, so it auto-syncs at most once per day. Volatile data
+// (orders/notifications/promos) should refresh much sooner so the sales rep
+// sees recent order statuses and new notifications without a manual pull.
 const _kAutoSyncThresholdHours = 24;
+const _kVolatileSyncThresholdMinutes = 15;
 
 class PreloadService {
   final AppDatabase _db; // Drift database for SSOT tables
@@ -174,22 +179,31 @@ class PreloadService {
         ]);
       }
 
-      // 2. Auto-sync orders — only when foundational data also syncs (> 24 hours)
-      if (needsAutoSync) {
-        debugPrint('[Preload] 🔄 Syncing orders from API...');
-        await _preloadOrders();
-      } else {
-        debugPrint('[Preload] ⏭️ Orders sync skipped (< 24 hours since last sync)');
+      // 2. Auto-sync volatile data (orders/promos/notifications) on a shorter
+      // cadence than foundational data so recent order statuses and new
+      // notifications show up without a manual pull.
+      final lastVolatileSync = await _db.getCacheTime(_kLastVolatilePreloadKey);
+      bool needsVolatileSync = true;
+      if (lastVolatileSync != null) {
+        final minutesSinceVolatile =
+            DateTime.now().difference(lastVolatileSync).inMinutes;
+        if (minutesSinceVolatile < _kVolatileSyncThresholdMinutes) {
+          needsVolatileSync = false;
+        }
       }
 
-      // 3. Sync dependent data (promos, notifications) — only when foundational syncs
-      if (needsAutoSync) {
+      if (needsVolatileSync) {
+        debugPrint('[Preload] 🔄 Syncing orders, promos & notifications...');
+        await _preloadOrders();
         await Future.wait([
           _preloadPromosIfNeeded(),
           _preloadNotifications(),
         ]);
+        await _savePreloadTimestamp(_kLastVolatilePreloadKey);
       } else {
-        debugPrint('[Preload] ⏭️ Promos & Notifications sync skipped (< 24 hours since last sync)');
+        debugPrint(
+          '[Preload] ⏭️ Volatile sync skipped (< $_kVolatileSyncThresholdMinutes min since last sync)',
+        );
       }
       debugPrint('[Preload] ✅ Auto sync completed');
     } catch (e, st) {

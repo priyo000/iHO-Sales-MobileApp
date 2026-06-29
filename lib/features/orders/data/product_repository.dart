@@ -94,27 +94,22 @@ class ProductRepository {
       return;
     }
 
-    // Skip if not force refresh and products already exist
-    if (!forceRefresh) {
-      final existing = await _db.getAllProducts();
-      if (existing.isNotEmpty) {
-        log('[Product SSOT] Products already cached (${existing.length}), skipping sync.');
-        return;
-      }
-    }
-
     try {
-      log('[Product SSOT] 🔄 Starting sync to Drift...');
+      log('[Product SSOT] 🔄 Starting sync to Drift... (forceRefresh=$forceRefresh)');
       final queryParams = <String, dynamic>{
         'per_page': -1, // Get all
       };
 
-      // Delta sync: only fetch changed since last sync
-      final lastModified = await _lastSync.getLastModified(
-        SyncResource.products,
-      );
-      if (lastModified != null) {
-        queryParams['since'] = lastModified;
+      // Delta sync: only fetch changed since last sync.
+      // A force refresh must NOT send `since` — it needs a full snapshot so
+      // deleted units/products can be reconciled against current server state.
+      if (!forceRefresh) {
+        final lastModified = await _lastSync.getLastModified(
+          SyncResource.products,
+        );
+        if (lastModified != null) {
+          queryParams['since'] = lastModified;
+        }
       }
 
       log('[Product SSOT] 📡 Calling API: ${ApiConstants.produk} with params: $queryParams');
@@ -204,6 +199,20 @@ class ProductRepository {
       if (allUnits.isNotEmpty) {
         await _db.saveProductUnits(allUnits);
         log('[Product SSOT] ✅ Saved ${allUnits.length} product units');
+      }
+
+      // Reconcile units per product so stale units deleted on the server do
+      // not linger locally. Only safe when the response is a full snapshot
+      // (forceRefresh / no `since`); a delta response may legitimately omit
+      // unchanged products, so we must not delete their units.
+      final isFullSnapshot = !queryParams.containsKey('since');
+      if (isFullSnapshot) {
+        final serverUnitIds = allUnits.map((u) => u.id.value).toSet();
+        final productIdsInResponse =
+            productsToSave.map((p) => p['id'].toString()).toList();
+        for (final productId in productIdsInResponse) {
+          await _db.deleteUnitsForProductExcept(productId, serverUnitIds);
+        }
       }
 
       // Save categories to categories_table for ProductCatalogPage chips.
